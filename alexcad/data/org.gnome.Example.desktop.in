@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=alexcad
+Exec=alexcad
+Icon=org.gnome.Example
+Terminal=false
+Type=Application
+Categories=GTK;
+StartupNotify=true
