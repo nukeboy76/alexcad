@@ -1,0 +1,38 @@
+{
+  "name": "",
+  "css_prefix_text": "",
+  "css_use_suffix": false,
+  "hinting": true,
+  "units_per_em": 1000,
+  "ascent": 850,
+  "glyphs": [
+    {
+      "uid": "3b191f9cf8813b76568e510e1e6621cc",
+      "css": "edges",
+      "code": 59393,
+      "src": "custom_icons",
+      "selected": true,
+      "svg": {
+        "path": "M83.3 200V916.7H916.7V83.3L435.9 433.3ZM875 165.2V875H125V277.5L437 484Z",
+        "width": 1000
+      },
+      "search": [
+        "edges"
+      ]
+    },
+    {
+      "uid": "bfd67b3563f252f99ff76fe56fc5fd90",
+      "css": "vertices",
+      "code": 59392,
+      "src": "custom_icons",
+      "selected": true,
+      "svg": {
+        "path": "M833.3 144L500 386.7V375H375V393L166.7 255.1V166.7H41.7V291.7H83.3V833.3H41.7V958.3H166.7V916.7H833.3V958.3H958.3V833.3H916.7V166.7H958.3V41.7H833.3ZM416.7 416.7H458.3V458.3H416.7ZM83.3 208.3H125V250H83.3ZM83.3 916.7V875H125V916.7ZM916.7 916.7H875V875H916.7ZM875 833.3H833.3V875H166.7V833.3H125V291.7H146.4L375 443V500H500V438.3L873 166.7H875ZM916.7 83.3V125H875V83.3Z",
+        "width": 1000
+      },
+      "search": [
+        "vertices"
+      ]
+    }
+  ]
+}
