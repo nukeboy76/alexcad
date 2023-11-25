@@ -22,17 +22,7 @@ bool isPointInQuad(Offset p, Offset a, Offset b, Offset c, Offset d) {
 }
 
 bool isPointInRect(Offset p, Offset lb, Offset rt) {
-    final a = lb;
-    final c = rt;
-    final b = Offset(a.dx, c.dy);
-    final d = Offset(c.dx, a.dy);
-    final pab = triangleArea(p, a, b);
-    final pbc = triangleArea(p, c, b);
-    final pcd = triangleArea(p, c, d);
-    final pda = triangleArea(p, a, d);
-
-    final rectArea = (b - a).distance * (d - b).distance;
-    return (pab + pbc + pcd + pda) < rectArea;
+    return Rect.fromPoints(lb, rt).contains(p);
 }
 
 bool isPointInCircle(Offset p, Offset c, double r) {

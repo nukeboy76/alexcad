@@ -15,8 +15,9 @@ abstract class EditorElement {
 
     EditorElement({this.selected = false});
 
-    void moveTo(Offset target);
+    void moveByDelta(Offset delta);
     bool? click(Offset mouseWorldClick) {}
+    bool? boxSelect(BoxSelection selection) {}
     void render(Window window, Painter painter) {}
 }
 
@@ -30,17 +31,24 @@ class Node extends EditorElement {
 
     Offset get center => position;
 
+    @override
     Offset operator +(Offset other) => Offset(position.dx + other.dx, position.dy + other.dy);
     Offset operator -(Offset other) => Offset(position.dx - other.dx, position.dy - other.dy);
 
     @override
-    void moveTo(Offset target) {
-        position = target;
+    void moveByDelta(Offset delta) {
+        position += delta;
     }
 
     @override
     bool? click(Offset mouseWorldClick) {
         selected = isPointInCircle(mouseWorldClick, position, radius);
+        return selected;
+    }
+
+    @override
+    bool? boxSelect(BoxSelection selection) {
+        selected = isPointInRect(center, selection.start, selection.end);
         return selected;
     }
 
@@ -96,11 +104,10 @@ class Beam extends EditorElement {
         return atan(delta.dy / delta.dx);
     }
 
-    // TODO!!
     @override
-    void moveTo(Offset target) {
-        start.position = Offset(0, 1);
-        end.position = Offset(0, 10);
+    void moveByDelta(Offset delta) { 
+        start.position += delta;
+        end.position += delta;
     }
 
     @override
@@ -111,6 +118,12 @@ class Beam extends EditorElement {
         d = rotatePoint(end.position, Offset(end.position.dx, end.position.dy - width / 2), rotation);
 
         selected = isPointInQuad(mouseWorldClick, a, b, c, d);
+        return selected;
+    }
+
+    @override
+    bool? boxSelect(BoxSelection selection) {
+        selected = isPointInRect(center, selection.start, selection.end);
         return selected;
     }
 
@@ -476,14 +489,52 @@ class _InspectorState extends State<Inspector> {
     }
 }
 
+abstract class EditorInputEvent {
+    void processInput(Editor editor, Input input) {}
+}
+
+class EditorClickEvent extends EditorInputEvent {
+    @override
+    void processInput(Editor editor, Input input) {
+        editor.selectedElements = [];
+        final start = input.boxSelectionWorld.start;
+        final end = input.boxSelectionWorld.end;
+
+        if (start == end) {
+            for (final c in editor.constructions) {
+                Offset pos = input.mouseWorldClick;
+                final click = c.click(pos);
+                if (click != null) {
+                    if (click == true) {
+                        editor.selectedElements.add(c);
+                    }
+                }
+            }
+        }
+    }
+}
+
+class EditorBoxSelectionEvent extends EditorInputEvent {
+    @override
+    void processInput(Editor editor, Input input) {
+
+    }
+}
+
+class EditorDragElementEvent extends EditorInputEvent {
+    @override
+    void processInput(Editor editor, Input input) {
+
+    }
+}
 
 class Editor {
     Editor({
         this.nodes = const [],
         this.selectedElements = const [],
         this.constructions = const [],
-        this.selectPoint = const Offset(0, 0),
-        this.selectPointHeight = 10,
+        this.dragBox = const Offset(999999, 999999),
+        this.dragBoxHeight = 10,
     }) {
         nodes = [
             Node(Offset(0, 0)),
@@ -520,69 +571,75 @@ class Editor {
     List<Beam> constructions;
     List<EditorElement> selectedElements;
 
-    Offset selectPoint;
-    double selectPointHeight;
+    Offset dragBox;
+    double dragBoxHeight;
 
-    EditorBar bar = EditorBar();
+    bool dragBoxSelected = false;
 
     /// Input
-    void selectConstructions(Input input) {
-        selectedElements = [];
-        final start = input.boxSelectionWorld.start;
-        final end = input.boxSelectionWorld.end;
+    void selectElements(Input input) {
+        if (input.isMouseDown && isPointInRect(dragBox, input.boxSelectionWorld.start, input.boxSelectionWorld.end)) {
+            dragBoxSelected = true;
+        }
 
-        if (start == end) {
-            for (final c in constructions) {
-                Offset pos = input.mouseWorldClick;
-                final click = c.click(pos);
-                if (click != null) {
-                    if (click == true) {
-                        selectedElements.add(c);
+
+        if (dragBoxSelected) {
+            dragBox += input.mouseDelta;
+            for (final s in selectedElements) {
+                s.moveByDelta(input.mouseDelta);
+            }
+        } else {
+            selectedElements = [];
+            final start = input.boxSelectionWorld.start;
+            final end = input.boxSelectionWorld.end;
+
+            if (start == end) {
+                for (final c in constructions) {
+                    Offset pos = input.mouseWorldClick;
+                    final click = c.click(pos);
+                    if (click != null) {
+                        if (click) {
+                            selectedElements.add(c);
+                        }
                     }
                 }
-            }   
-        } else {
-            for (final c in constructions) {
-                if (isPointInRect(c.center, start, end)) {
-                    selectedElements.add(c);
-                }
-            }   
-        }
-    }
-/*
-    void selectDragBox(Window window) {
-        if (window.isMouseDown) {
-            final a = Offset(se)
-            final b = rotatePoint(start, Offset(start.dx, start.dy - width / 2), rotation);
-            c = rotatePoint(end, Offset(end.dx, end.dy + width / 2), rotation);
-            d = rotatePoint(end, Offset(end.dx, end.dy - width / 2), rotation);
-
-            if (isPointInQuad(mouseWorldClick.dx, mouseWorldClick.dy, a, b, c, d)) {
-
+            } else {
+                for (final c in constructions) {
+                    final select = c.boxSelect(input.boxSelectionWorld);
+                    if (select != null) {
+                        if (select) {
+                            selectedElements.add(c);
+                        }        
+                    }
+                }   
             }
         }
     }
-*/
+
+    void selectDragBox(Input input) {
+    }
 
     void processInput(Input input) {
-        selectConstructions(input);
-        //selectDragBox(window);
+        selectDragBox(input);
+        selectElements(input);
     }
 
     /// Input UI
     void drawBoxSelection(Window window, Painter painter, Input input) {
-        final selection = input.boxSelectionWorld;
-        if (input.isMouseDown == true && selection.start != selection.end) {
-            painter.setPaint(color: Color.fromRGBO(0, 102, 102, 200), width: 1);
-            painter.drawCircle(window, window.worldToScreen(selection.start), 10);
-            painter.drawCircle(window, window.worldToScreen(selection.end), 10);
-            painter.drawRect(
-                window,
-                Rect.fromPoints(
-                    window.worldToScreen(selection.start), 
-                    window.worldToScreen(selection.end),
-                )
-            );
+        if (!dragBoxSelected) {
+            final selection = input.boxSelectionWorld;
+            if (input.isMouseDown && selection.start != selection.end) {
+                painter.setPaint(color: Color.fromRGBO(0, 102, 102, 200), width: 1);
+                painter.drawCircle(window, window.worldToScreen(selection.start), 10);
+                painter.drawCircle(window, window.worldToScreen(selection.end), 10);
+                painter.drawRect(
+                    window,
+                    Rect.fromPoints(
+                        window.worldToScreen(selection.start), 
+                        window.worldToScreen(selection.end),
+                    )
+                );
+            }
         }
     }
 
@@ -606,9 +663,12 @@ class Editor {
             for (int i = 0; i < n; i++) {
                 selectedCentersSum += selectedElements[i].center; 
             }
-            selectPoint = selectedCentersSum / n.toDouble();
+            dragBox = selectedCentersSum / n.toDouble();
             painter.setPaint(color: Colors.yellow, width: 1);
-            painter.drawCircle(window, window.worldToScreen(selectPoint), 10);
+            painter.drawRect(
+                window,
+                Rect.fromCircle(center: window.worldToScreen(dragBox), radius: dragBoxHeight),
+            );
         }
     }
 
@@ -775,7 +835,7 @@ class Input {
     Offset mouseDown;
     Offset mouseUp;
     Offset mouseWorldClick;
-    //late PointerEvent lastPointerEvent;
+    late PointerEvent lastPointerEvent;
     bool isMouseDown;
     BoxSelection boxSelectionWorld = BoxSelection.infinity();
 
