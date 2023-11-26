@@ -18,8 +18,9 @@ abstract class EditorElement {
     EditorElement({this.selected = false, this.position = const Offset(double.infinity, double.infinity)});
 
     List<Node> getElementNodes() => [];
+    void refreshUI() {}
     void moveByDelta(Offset delta) {}
-    bool? click(Offset mouseWorldClick) {}
+    bool? click(Window window, Offset mouseWorldClick) {}
     bool? boxSelect(BoxSelection selection) {}
     void render(Window window, Painter painter) {}
 }
@@ -47,11 +48,15 @@ class Node extends EditorElement {
     }
 
     @override
-    bool? click(Offset mouseWorldClick) {
+    void refreshUI() {}
+
+    @override
+    bool? click(Window window, Offset mouseWorldClick) {
         selected = Rect.fromCircle(
             center: position,
             radius: radius,
         ).contains(mouseWorldClick);
+        selected = isPointInCircle(mouseWorldClick, position, radius * (1 / window.zoom));
         print(selected);
         return selected;
     }
@@ -98,7 +103,6 @@ class Beam extends EditorElement {
     late Offset a, b, c, d;
     final double centerCrossLength = 7;
 
-
     @override
     Offset get position => center;
 
@@ -131,11 +135,16 @@ class Beam extends EditorElement {
     }
 
     @override
-    bool? click(Offset mouseWorldClick) {
+    void refreshUI() {
         a = rotatePoint(start.position, Offset(start.position.dx, start.position.dy + width / 2), rotation);
         b = rotatePoint(start.position, Offset(start.position.dx, start.position.dy - width / 2), rotation);
         c = rotatePoint(end.position, Offset(end.position.dx, end.position.dy + width / 2), rotation);
         d = rotatePoint(end.position, Offset(end.position.dx, end.position.dy - width / 2), rotation);
+    }
+
+    @override
+    bool? click(Window window, Offset mouseWorldClick) {
+        refreshUI();
 
         selected = isPointInQuad(mouseWorldClick, a, b, c, d);
         return selected;
@@ -149,7 +158,7 @@ class Beam extends EditorElement {
 
     @override
     void render(Window window, Painter painter) {
-        final color = selected ? Colors.orange : Colors.grey.shade800;
+        final color = selected ? Colors.orange : Colors.grey.shade700;
         painter.setPaint(color: color);
         painter.drawQuad(window, a, b, c, d);
 
@@ -342,7 +351,7 @@ class _InspectorState extends State<Inspector> {
         value: e.name,
     )).toList();
 
-    bool isSelectedConstructionsEmpty() {
+    bool isSelectedElementsEmpty() {
         return widget.selectedElements.isEmpty;   
     }
 
@@ -374,10 +383,11 @@ class _InspectorState extends State<Inspector> {
             width: widget.width,
             height: widget.height,
             color: widget.color,
+            /*
             child: Column(
                 children: [
                     Text("${widget.title}"),
-                    isSelectedConstructionsEmpty() ? Row() : Row(
+                    isSelectedElementsEmpty() ? Row() : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                             Flexible(
@@ -433,7 +443,7 @@ class _InspectorState extends State<Inspector> {
                             */
                         ],
                     ),
-                    isSelectedConstructionsEmpty() ? Row() : Row(
+                    isSelectedElementsEmpty() ? Row() : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                             Flexible(
@@ -452,7 +462,7 @@ class _InspectorState extends State<Inspector> {
                             ),
                         ]
                     ),
-                    isSelectedConstructionsEmpty() ? Row() : Row(
+                    isSelectedElementsEmpty() ? Row() : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                             Flexible(
@@ -471,7 +481,7 @@ class _InspectorState extends State<Inspector> {
                             ),
                         ]
                     ),
-                    isSelectedConstructionsEmpty() ? Row() : Row(
+                    isSelectedElementsEmpty() ? Row() : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                             Flexible(
@@ -490,7 +500,7 @@ class _InspectorState extends State<Inspector> {
                             ),
                         ]
                     ),
-                    isSelectedConstructionsEmpty() ? Row() : Row(
+                    isSelectedElementsEmpty() ? Row() : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                             Flexible(
@@ -507,22 +517,19 @@ class _InspectorState extends State<Inspector> {
                     ),
                 ],
             ),
+            */
         );
     }
 }
 
 abstract class EditorSelectionState {
     void processInput(Editor editor, Window window, Input input) {}
-    void drawDragBox(Window window, Painter painter) {}
 }
 
 class EditorInitialSelectionState extends EditorSelectionState {
     EditorInitialSelectionState(Editor editor);
     @override
-    void processInput(Editor editor, Window window, Input input) {
-    }
-    @override
-    void drawDragBox(Window window, Painter painter) {}
+    void processInput(Editor editor, Window window, Input input) {}
 }
 
 class EditorProcessSelectionState extends EditorSelectionState {
@@ -538,7 +545,8 @@ class EditorProcessSelectionState extends EditorSelectionState {
         final end = input.boxSelectionWorld.end;
 
         if (start != end) {
-            for (final c in editor.constructions) {
+            final list = editor.bar.isBeamSelectionMode ? editor.constructions : editor.nodes;
+            for (final c in list) {
                 final select = c.boxSelect(input.boxSelectionWorld);
                 if (select != null) {
                     if (select) {
@@ -547,18 +555,19 @@ class EditorProcessSelectionState extends EditorSelectionState {
                 }
             }   
         } else {
-            for (final c in editor.constructions) {
-                final click = c.click(input.mouseWorldClick);
-                if (click != null) {
-                    if (click) {
+            final list = editor.bar.isBeamSelectionMode ? editor.constructions : editor.nodes;
+            for (final c in list.reversed.toList()) {
+                final click = c.click(window, input.mouseWorldClick);
+                if (click != null && click) {
+                    if (editor.selectedElements.isEmpty) {
                         editor.selectedElements.add(c);
+                    } else {
+                        c.selected = false;
                     }
                 }
             }
         }
     }
-    @override
-    void drawDragBox(Window window, Painter painter) {}
 }
 
 class EditorDoneSelectionState extends EditorSelectionState {
@@ -567,9 +576,8 @@ class EditorDoneSelectionState extends EditorSelectionState {
     void processInput(Editor editor, Window window, Input input) {
         final mouseInDragBox = Rect.fromCircle(
             center: editor.dragBox,
-            radius: editor.dragBoxHeight * window.zoom * 0.0021,
+            radius: editor.dragBoxRadius * (1 / window.zoom),
         ).contains(input.mousePosWorld);
-
 
         if (input.isMouseDown && mouseInDragBox) {
             editor.changeSelectionState(EditorDragSelectionState(editor));
@@ -577,8 +585,6 @@ class EditorDoneSelectionState extends EditorSelectionState {
             editor.changeSelectionState(EditorProcessSelectionState(editor));
         }
     }
-    @override
-    void drawDragBox(Window window, Painter painter) {}
 }
 
 class EditorDragSelectionState extends EditorSelectionState {
@@ -593,6 +599,8 @@ class EditorDragSelectionState extends EditorSelectionState {
                 for (final node in e.getElementNodes()) {
                     nodes.add(node);
                 }
+                print(e.toString()
+                    );
             }
             for (final n in nodes) {
                 n.position = n.position + (input.boxSelectionWorld.end - editor.dragBox);
@@ -601,9 +609,6 @@ class EditorDragSelectionState extends EditorSelectionState {
             editor.dragBox = input.boxSelectionWorld.end;
         }
     }
-
-    @override
-    void drawDragBox(Window window, Painter painter) {}
 }
 
 class Editor {
@@ -612,7 +617,7 @@ class Editor {
         this.selectedElements = const [],
         this.constructions = const [],
         this.dragBox = const Offset(double.infinity, double.infinity),
-        this.dragBoxHeight = 10,
+        this.dragBoxRadius = 10,
     }) {
         nodes = [
             Node(Offset(0, 0)),
@@ -658,7 +663,7 @@ class Editor {
 
 
     Offset dragBox;
-    double dragBoxHeight;
+    double dragBoxRadius;
 
     EditorBar bar = EditorBar();
 
@@ -695,6 +700,7 @@ class Editor {
     /// Rendering
     void drawConstructions(Window window, Painter painter) {
         for (final c in constructions) {
+            c.refreshUI();
             c.render(window, painter);
         }
     }
@@ -713,10 +719,23 @@ class Editor {
                 selectedCentersSum += selectedElements[i].center; 
             }
             dragBox = selectedCentersSum / n.toDouble();
-            painter.setPaint(color: Colors.yellow, width: 1);
+            painter.setPaint(color: Color.fromRGBO(0, 0, 255, 192), width: 1);
             painter.drawRect(
                 window,
-                Rect.fromCircle(center: window.worldToScreen(dragBox), radius: dragBoxHeight),
+                Rect.fromCenter(
+                    center: window.worldToScreen(dragBox),
+                    width: dragBoxRadius,
+                    height: dragBoxRadius * 4,
+                ),
+            );
+            painter.setPaint(color: Color.fromRGBO(255, 0, 0, 192), width: 1);
+            painter.drawRect(
+                window,
+                Rect.fromCenter(
+                    center: window.worldToScreen(dragBox),
+                    width: dragBoxRadius * 4,
+                    height: dragBoxRadius,
+                ),
             );
         }
     }
