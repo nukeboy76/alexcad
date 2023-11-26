@@ -93,10 +93,11 @@ class Beam extends EditorElement {
     double sectionArea;
     double elasticity;
     double tension;
+    bool selected = false;
 
     late Offset a, b, c, d;
+    final double centerCrossLength = 7;
 
-    bool selected = false;
 
     @override
     Offset get position => center;
@@ -151,17 +152,21 @@ class Beam extends EditorElement {
         final color = selected ? Colors.orange : Colors.grey.shade800;
         painter.setPaint(color: color);
         painter.drawQuad(window, a, b, c, d);
+
+        final screenCenter = window.worldToScreen(center);
+        painter.setPaint(color: selected ? Colors.orange.shade700 : Colors.grey.shade900);
+        for (final d in directions) {
+            painter.drawLine(window, screenCenter + d * centerCrossLength, screenCenter - d * centerCrossLength);
+        }
     }
 }
 
 class Painter {
     Paint paint = Paint()
-        ..color = const Color.fromARGB(255, 32, 32, 32)
         ..style = PaintingStyle.fill
         ..isAntiAlias = true;
 
     Paint paintStroke = Paint()
-        ..color = const Color.fromARGB(255, 32, 32, 32)
         ..style = PaintingStyle.stroke
         ..isAntiAlias = true;
 
@@ -565,6 +570,7 @@ class EditorDoneSelectionState extends EditorSelectionState {
             radius: editor.dragBoxHeight * window.zoom * 0.0021,
         ).contains(input.mousePosWorld);
 
+
         if (input.isMouseDown && mouseInDragBox) {
             editor.changeSelectionState(EditorDragSelectionState(editor));
         } else if (input.isMouseDown && !mouseInDragBox) {
@@ -657,6 +663,7 @@ class Editor {
     EditorBar bar = EditorBar();
 
     late EditorSelectionState selectionState;
+    Color boxSelectionColor = Color.fromRGBO(13, 88, 166, 192);
 
     void changeSelectionState(EditorSelectionState state) {
         selectionState = state;
@@ -672,7 +679,7 @@ class Editor {
     void drawBoxSelection(Window window, Painter painter, Input input) {
         final selection = input.boxSelectionWorld;
         if (input.isMouseDown && selection.start != selection.end) {
-            painter.setPaint(color: Color.fromRGBO(0, 102, 102, 200), width: 1);
+            painter.setPaint(color: boxSelectionColor, width: 1);
             painter.drawCircle(window, window.worldToScreen(selection.start), 10);
             painter.drawCircle(window, window.worldToScreen(selection.end), 10);
             painter.drawRect(

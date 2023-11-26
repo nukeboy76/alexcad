@@ -2,6 +2,18 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+final List<Offset> directions = [
+    Offset(1, 0),
+    Offset(0, 1),
+];
+
+final List<Offset> allDirections = [
+    Offset(1, 0),
+    Offset(-1, 0),
+    Offset(0, 1),
+    Offset(0, -1),
+];
+
 bool xAxisEqual(Offset a, Offset b) => a.dx == b.dx;
 bool yAxisEqual(Offset a, Offset b) => a.dy == b.dy;
 bool xAscendingAB(Offset a, Offset b) => (b.dx - a.dx) > 0;
