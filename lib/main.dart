@@ -46,13 +46,11 @@ class _CADEditorState extends State<CADEditor> {
     UI ui = UI();
     Editor editor = Editor();
 
-    EditorBar bar = EditorBar();
-    final double barHeight = 60;
-
     Painter painter = Painter();
     FocusNode _focus = FocusNode();
 
-    double inspectorWidth = 400;
+    final double inspectorWidth = 400;
+    final double barHeight = 60;
 
     void init(Canvas canvas, Size size) {
         this.window.init(canvas, size);
@@ -64,7 +62,7 @@ class _CADEditorState extends State<CADEditor> {
 
     void processAll() {
         ui.render(window, painter);
-        editor.processInput(input);
+        editor.processInput(window, input);
         editor.render(window, painter, input);
     }
 
@@ -138,7 +136,7 @@ class _CADEditorState extends State<CADEditor> {
                             height: barHeight,
                             alignment: Alignment.topLeft,
                             padding: const EdgeInsets.all(5.0),
-                            child: bar,
+                            child: editor.bar,
                         ),
                     ]
                 ),
