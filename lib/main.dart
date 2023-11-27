@@ -4,8 +4,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'alexcad.dart';
 import 'app_icons.dart';
+import 'alexcad.dart';
+import 'editor.dart';
+import 'input.dart';
+import 'inspector.dart';
+import 'painter.dart';
+import 'window.dart';
+
 
 void main() async{
     WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +49,7 @@ class _CADEditorState extends State<CADEditor> {
     Window window = Window();
 
     Input input = Input();
-    UI ui = UI();
+    Grid grid = Grid();
     Editor editor = Editor();
 
     Painter painter = Painter();
@@ -61,7 +67,7 @@ class _CADEditorState extends State<CADEditor> {
     }
 
     void processAll() {
-        ui.render(window, painter);
+        grid.render(window, painter);
         editor.processInput(window, input);
         editor.render(window, painter, input);
     }
