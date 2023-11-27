@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app_icons.dart';
-import 'alexcad.dart';
 import 'editor.dart';
 import 'input.dart';
 import 'inspector.dart';
