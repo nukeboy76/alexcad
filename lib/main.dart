@@ -48,7 +48,6 @@ class _CADEditorState extends State<CADEditor> {
     Window window = Window();
 
     Input input = Input();
-    Grid grid = Grid();
     Editor editor = Editor();
 
     Painter painter = Painter();
@@ -66,7 +65,6 @@ class _CADEditorState extends State<CADEditor> {
     }
 
     void processAll() {
-        grid.render(window, painter);
         editor.processInput(window, input);
         editor.render(window, painter, input);
     }

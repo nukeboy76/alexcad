@@ -28,19 +28,42 @@ abstract class EditorElement {
     void render(Window window, Painter painter) {}
 }
 
+/// h — horisontal, v — vertical, t — turn
+enum NodeFixator {
+    hvt,
+    hv,
+    ht,
+    vt,
+    h,
+    t,
+    v,
+    disabled,
+}
+
 class Node extends EditorElement {
-    Node(this.position, {this.selected = false});
+    Node(this.position, {
+        this.selected = false,
+        this.force = const Offset(1, 1),
+        this.nodeFixator = NodeFixator.disabled,
+    });
 
+    /// Data
     Offset position;
+    Offset force;
+    NodeFixator nodeFixator;
+
+    /// UI
     bool selected;
-
     final double radius = 10;
+    final double nodeFixatorRadius = 15;
 
-    Offset get center => position;
 
     @override
     Offset operator +(Offset other) => Offset(position.dx + other.dx, position.dy + other.dy);
     Offset operator -(Offset other) => Offset(position.dx - other.dx, position.dy - other.dy);
+
+    @override
+    Offset get center => position;
 
     @override
     void set center(Offset p) => position = p;
@@ -71,6 +94,16 @@ class Node extends EditorElement {
 
     @override
     void render(Window window, Painter painter) {
+        if (nodeFixator != NodeFixator.disabled) {
+            painter.setPaint(color: selected ? Colors.orange.shade400 : Colors.grey.shade400);
+            painter.drawRect(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(center),
+                    radius: nodeFixatorRadius,
+                ),
+            );
+        }
         painter.setPaint(color: selected ? Colors.orange : Colors.grey);
         painter.drawCircle(window, window.worldToScreen(center), radius);
     }
@@ -86,8 +119,9 @@ class Beam extends EditorElement {
     Beam({
         required this.start,
         required this.end,
-        this.width = 1,
+        this.force = const Offset(1, 1),
         this.section = BeamSection.rect,
+        this.width = 1,
         this.sectionArea = 1,
         this.elasticity = 1,
         this.tension = 1,
@@ -95,11 +129,14 @@ class Beam extends EditorElement {
 
     Node start;
     Node end;
+
+    Offset force;
     BeamSection section;
     double width;
     double sectionArea;
     double elasticity;
     double tension;
+
     bool selected = false;
 
     late Offset a, b, c, d;
@@ -184,7 +221,11 @@ class EditorInitialSelectionState extends EditorSelectionState {
 }
 
 class EditorProcessSelectionState extends EditorSelectionState {
-    EditorProcessSelectionState(Editor editor);
+    EditorProcessSelectionState(Editor editor) {
+        for(final e in editor.editorElements) {
+            e.selected = false;
+        }
+    }
     @override
     void processInput(Editor editor, Window window, Input input) {
         if (!editor.selectedElements.isEmpty && !input.isMouseDown) {
@@ -269,9 +310,9 @@ class Editor {
         this.dragBoxRadius = 10,
     }) {
         nodes = [
-            Node(Offset(0, 0)),
+            Node(Offset(0, 0), nodeFixator: NodeFixator.hvt),
             Node(Offset(1, 0)),
-            Node(Offset(5, 0)),
+            Node(Offset(5, 0), nodeFixator: NodeFixator.hvt),
             Node(Offset(9, 10)),
             Node(Offset(-5, 5)),
             Node(Offset(-9, 0)),
@@ -303,21 +344,29 @@ class Editor {
                 section: BeamSection.round,
             ),
         ];
+        editorElements = List.from(nodes)..addAll(constructions);
+        bar = EditorBar(this);
         selectionState = EditorProcessSelectionState(this);
     }
 
     List<Node> nodes;
     List<Beam> constructions;
+    late List<EditorElement> editorElements;
     List<EditorElement> selectedElements;
 
 
     Offset dragBox;
     double dragBoxRadius;
 
-    EditorBar bar = EditorBar();
+    Grid grid = Grid();
 
     late EditorSelectionState selectionState;
+    late EditorBar bar;
     Color boxSelectionColor = Color.fromRGBO(13, 88, 166, 192);
+
+    void resetSelectionState() {
+        selectionState = EditorProcessSelectionState(this);
+    }
 
     void changeSelectionState(EditorSelectionState state) {
         selectionState = state;
@@ -389,6 +438,7 @@ class Editor {
     }
 
     void render(Window window, Painter painter, Input input) {
+        grid.render(window, painter);
         drawConstructions(window, painter);
         drawNodes(window, painter);
         drawDragBox(window, painter);
@@ -489,10 +539,17 @@ class Grid {
 }
 
 class EditorBar extends StatefulWidget {
+    EditorBar(Editor this.editor);
+
+    Editor editor;
     List<bool> selectionMode = [true, false];
 
     bool get isBeamSelectionMode => selectionMode[0];
     bool get isNodeSelectionMode => selectionMode[1];
+
+    void unselectAllElements() {
+        editor.resetSelectionState();
+    }
 
     @override
     State<EditorBar> createState() => _EditorBarState();
@@ -510,6 +567,7 @@ class _EditorBarState extends State<EditorBar> {
             child: ToggleButtons(
                 onPressed: (int index) {
                     setState(() {
+                        widget.unselectAllElements();
                         for (int i = 0; i < widget.selectionMode.length; i++) {
                             widget.selectionMode[i] = i == index;
                         }

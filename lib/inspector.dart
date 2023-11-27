@@ -211,3 +211,23 @@ class _InspectorState extends State<Inspector> {
         );
     }
 }
+
+/*
+class InspectorNode extends StatefulWidget {
+    const InspectorNode({
+        super.key,
+    });
+
+    List<EditorElement> selectedElements;
+
+    @override
+    State<Inspector> createState() => _InspectorNodeState();
+}
+
+class _InspectorNodeState extends State<InspectorNode> {
+    @override
+    Widget build(BuildContext context) {
+
+    }
+}
+*/
