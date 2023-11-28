@@ -41,9 +41,8 @@ class _InspectorState extends State<Inspector> {
         value: e.name,
     )).toList();
 
-    bool isSelectedElementsEmpty() {
-        return widget.selectedElements.isEmpty;   
-    }
+    bool get selectedElementsEmpty => widget.selectedElements.isEmpty;
+    bool get isBeamSelectionMode => widget.editor.bar.isBeamSelectionMode;
 
     String getBeamSection() {
         if (widget.selectedElements[0] is Beam) {
@@ -68,11 +67,21 @@ class _InspectorState extends State<Inspector> {
 
     @override
     Widget build(BuildContext context) {
-        String selected = widget.selectedElements.toString();
         return Container(
             width: widget.width,
             height: widget.height,
             color: widget.color,
+            child: Column(
+                children: [
+                    Text("${widget.title}"),
+                    selectedElementsEmpty ? Row() : isBeamSelectionMode ?
+                        EditorBeamWidget(
+                            widget.selectedElements,
+                        ) : EditorNodeWidget(
+                            widget.selectedElements,
+                        ),
+                ],
+            ),
             /*
             child: Column(
                 children: [
@@ -212,22 +221,121 @@ class _InspectorState extends State<Inspector> {
     }
 }
 
-/*
-class InspectorNode extends StatefulWidget {
-    const InspectorNode({
+class NodeWidget extends StatefulWidget {
+    const NodeWidget({
         super.key,
+        required: this.element,
     });
 
-    List<EditorElement> selectedElements;
+    String title;
+    Node node;
 
     @override
-    State<Inspector> createState() => _InspectorNodeState();
+    State<Inspector> createState() => _NodeWidgetState();
 }
 
-class _InspectorNodeState extends State<InspectorNode> {
+class _NodeWidgetState extends State<NodeWidget> {
     @override
     Widget build(BuildContext context) {
-
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                        Flexible(
+                            child: Text(
+                                "Position",
+                            ),
+                        ),
+                        Flexible(
+                            child: TextField(
+                                controller: TextEditingController(text: widget.node.center.dx.toString()),
+                                decoration: InputDecoration(labelText: "X"),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.allow(RegExp('[0-9\.]')),
+                                ],
+                            ),
+                        ),
+                        Flexible(
+                            child: TextField(
+                                controller: TextEditingController(text: widget.node.center.dy.toString()),
+                                decoration: InputDecoration(labelText: "Y"),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.allow(RegExp('[0-9\.]')),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                        Flexible(
+                            child: Text(
+                                "Force",
+                            ),
+                        ),
+                        Flexible(
+                            child: TextField(
+                                controller: TextEditingController(text: widget.node.force.dx.toString()),
+                                decoration: InputDecoration(labelText: "Fx"),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.allow(RegExp('[0-9\.]')),
+                                ],
+                            ),
+                        ),
+                        Flexible(
+                            child: TextField(
+                                controller: TextEditingController(text: widget.node.force.dy.toString()),
+                                decoration: InputDecoration(labelText: "Fy"),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.allow(RegExp('[0-9\.]')),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                        Flexible(
+                            child: Text(
+                                "Torque force",
+                            ),
+                        ),
+                        Flexible(
+                            child: TextField(
+                                controller: TextEditingController(text: widget.node.torqueForce.toString()),
+                                decoration: InputDecoration(labelText: "F"),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.allow(RegExp('[0-9\.]')),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                        Flexible(
+                            child: Text(
+                                "Section",
+                            ),
+                        ),
+                        Flexible(
+                            child: Text(
+                                getBeamSection(),
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        );
     }
 }
-*/

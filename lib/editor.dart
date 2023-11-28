@@ -50,6 +50,7 @@ class Node extends EditorElement {
     /// Data
     Offset position;
     Offset force;
+    double torqueForce;
     NodeFixator nodeFixator;
 
     /// UI
@@ -237,7 +238,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
         final end = input.boxSelectionWorld.end;
 
         if (start != end) {
-            final list = editor.bar.isBeamSelectionMode ? editor.constructions : editor.nodes;
+            final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list) {
                 final select = c.boxSelect(input.boxSelectionWorld);
                 if (select != null) {
@@ -247,7 +248,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
                 }
             }   
         } else {
-            final list = editor.bar.isBeamSelectionMode ? editor.constructions : editor.nodes;
+            final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list.reversed.toList()) {
                 final click = c.click(window, input.mouseWorldClick);
                 if (click != null && click) {
@@ -305,7 +306,7 @@ class Editor {
     Editor({
         this.nodes = const [],
         this.selectedElements = const [],
-        this.constructions = const [],
+        this.beams = const [],
         this.dragBox = const Offset(double.infinity, double.infinity),
         this.dragBoxRadius = 10,
     }) {
@@ -318,7 +319,7 @@ class Editor {
             Node(Offset(-9, 0)),
         ];
         nodes.add(Node(Offset(7, 7)));
-        constructions = [
+        beams = [
             Beam(
                 start: nodes[0],
                 end: nodes[1],
@@ -344,13 +345,13 @@ class Editor {
                 section: BeamSection.round,
             ),
         ];
-        editorElements = List.from(nodes)..addAll(constructions);
+        editorElements = List.from(nodes)..addAll(beams);
         bar = EditorBar(this);
         selectionState = EditorProcessSelectionState(this);
     }
 
     List<Node> nodes;
-    List<Beam> constructions;
+    List<Beam> beams;
     late List<EditorElement> editorElements;
     List<EditorElement> selectedElements;
 
@@ -395,8 +396,8 @@ class Editor {
     }
 
     /// Rendering
-    void drawConstructions(Window window, Painter painter) {
-        for (final c in constructions) {
+    void drawBeams(Window window, Painter painter) {
+        for (final c in beams) {
             c.refreshGrid();
             c.render(window, painter);
         }
@@ -439,7 +440,7 @@ class Editor {
 
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
-        drawConstructions(window, painter);
+        drawBeams(window, painter);
         drawNodes(window, painter);
         drawDragBox(window, painter);
         drawBoxSelection(window, painter, input);
