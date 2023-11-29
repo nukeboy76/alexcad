@@ -47,7 +47,7 @@ class _InspectorState extends State<Inspector> {
             width: widget.width,
             height: widget.height,
             color: widget.color,
-            child: Column(
+            child: ListView(
                 children: [
                     Text("${widget.title}"),
                     selectedElementsLength != 1 ? Row() : selectedIsBeam ?

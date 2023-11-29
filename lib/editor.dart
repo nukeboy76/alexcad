@@ -107,24 +107,12 @@ class Node extends EditorElement {
         if (force.dx != 0 || force.dy != 0) {
             painter.drawText(
                 window: window,
-                text: 'x: ${force.dx.toStringAsFixed(2)}',
+                text: '[${force.dx.toStringAsFixed(2)}; ${force.dy.toStringAsFixed(2)}]',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
-                bgColor: Color.fromRGBO(255, 255, 255, 0),
+                bgColor: Colors.white,
                 textOffset: window.worldToScreen(center) + Offset(0, -forceLabelOffset),
                 outline: true,
-                centerAlignX: true,
-                centerAlignY: true,
-            );
-            painter.drawText(
-                window: window,
-                text: 'y: ${force.dy.toStringAsFixed(2)}',
-                fontSize: forceLabelFontSize,
-                textColor: Colors.black,
-                bgColor: Color.fromRGBO(255, 255, 255, 0),
-                textOffset: window.worldToScreen(center) + Offset(0, forceLabelOffset),
-                outline: true,
-                outlineSize: 1,
                 centerAlignX: true,
                 centerAlignY: true,
             );

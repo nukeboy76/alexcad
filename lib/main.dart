@@ -143,10 +143,12 @@ class _CADEditorState extends State<CADEditor> {
                         ),
                     ]
                 ),
-                Inspector(
-                    editor.selectedElements,
-                    width: inspectorWidth,
-                    height: MediaQuery.of(context).size.height,
+                SingleChildScrollView(
+                    child: Inspector(
+                        editor.selectedElements,
+                        //width: inspectorWidth,
+                        height: MediaQuery.of(context).size.height,
+                    ),
                 ),
             ],
         );

@@ -62,20 +62,37 @@ class Input {
         }*/
     }
 
+    /// TODO: Flutter can't detect current mouse up button, always return event.buttons.
+    /// Need to finde the way how to differ it.
     void handlePointerUp(Window window, PointerEvent event) {
         isLMBDown = false;
         isRMBDown = false;
+        lMBUp = event.position;
+        rMBUp = event.position;
+
+        if (lMBUp == lMBDown) {
+            lMBWorldClick = window.screenToWorld(lMBDown);
+        }
+
+        if (rMBUp == rMBDown) {
+            rMBWorldClick = window.screenToWorld(rMBDown);
+        }
+
+        /*
         if (event.buttons == 1) {
             lMBUp = event.position;
             if (lMBUp == lMBDown) {
                 lMBWorldClick = window.screenToWorld(lMBDown);
             }
+            isLMBDown = false;
         } else if ([2, 4].contains(event.buttons)) {
             rMBUp = event.position;
             if (rMBUp == rMBDown) {
                 rMBWorldClick = window.screenToWorld(rMBDown);
             }
+            isRMBDown = false;
         }
+        */
     }
 
     void handlePointerDown(Window window, PointerEvent event) {
@@ -88,12 +105,6 @@ class Input {
             boxSelectionWorld = BoxSelection.fromStart(window.screenToWorld(rMBDown));
             isRMBDown = true;
         }
-        /*
-        print('isLMBDown');
-        print(isLMBDown);
-        print('isRMBDown');
-        print(isRMBDown);
-        */
     }
 
     void handlePointerScroll(Window window, PointerScrollEvent event) {
@@ -106,11 +117,10 @@ class Input {
                 window.pan -= panDelta;
             }
         }
-        //print(window.zoom);
     }
 
     void handleKeyEvent(RawKeyEvent event) {
-        //
+        /*
         if (event.logicalKey == LogicalKeyboardKey.keyQ) {
             //
         } else {
@@ -120,5 +130,6 @@ class Input {
                 //
             }
         }
+        */
     }
 }
