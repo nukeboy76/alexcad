@@ -13,15 +13,15 @@ import 'utils/utils.dart';
 
 class Input {
     Input({
-        this.mousePosWorld = const Offset(double.infinity, double.infinity),
-        this.mouseWorldDelta = const Offset(double.infinity, double.infinity),
-        this.mouseDelta = const Offset(double.infinity, double.infinity),
-        this.lMBWorldClick = const Offset(double.infinity, double.infinity),
-        this.rMBWorldClick = const Offset(double.infinity, double.infinity),
-        this.lMBDown = const Offset(double.infinity, double.infinity),
-        this.lMBUp = const Offset(double.infinity, double.infinity),
-        this.rMBDown = const Offset(double.infinity, double.infinity),
-        this.rMBUp = const Offset(double.infinity, double.infinity),
+        this.mousePosWorld = infinityOffset,
+        this.mouseWorldDelta = infinityOffset,
+        this.mouseDelta = infinityOffset,
+        this.lMBWorldClick = infinityOffset,
+        this.rMBWorldClick = infinityOffset,
+        this.lMBDown = infinityOffset,
+        this.lMBUp = infinityOffset,
+        this.rMBDown = infinityOffset,
+        this.rMBUp = infinityOffset,
         this.isLMBDown = false,
         this.isRMBDown = false,
     });

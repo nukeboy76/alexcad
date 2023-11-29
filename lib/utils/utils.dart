@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+const Offset infinityOffset = Offset(double.infinity, double.infinity);
 
 final List<Offset> directions = [
     Offset(1, 0),

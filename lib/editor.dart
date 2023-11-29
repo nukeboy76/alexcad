@@ -15,13 +15,15 @@ import 'utils/utils.dart';
 abstract class EditorElement {
     EditorElement({
         this.selected = false,
-        this.position = const Offset(double.infinity, double.infinity),
     });
 
     Offset get center;
-    void set center(Offset p);
-    Offset position;
+    Offset get position;
+    void set position(Offset p);
     bool selected;
+
+    //InspectorView inspectorView;
+    //EditorView editorView;
 
     List<Node> getElementNodes() => [];
     void refreshGrid() {}
@@ -45,7 +47,7 @@ enum NodeFixator {
 }
 
 class Node extends EditorElement {
-    Node(this.position, {
+    Node(Offset position, {
         this.selected = false,
         this.force = const Offset(0, 0),
         this.torqueForce = 0,
@@ -54,10 +56,12 @@ class Node extends EditorElement {
         this.fixatorRadius = 15,
         this.forceLabelOffset = 17,
         this.forceLabelFontSize = 12,
-    });
+    }) {
+        this._position = position;
+    }
 
     /// Data
-    Offset position;
+    Offset _position = infinityOffset;
     Offset force;
     double torqueForce;
     NodeFixator fixator;
@@ -70,14 +74,17 @@ class Node extends EditorElement {
     final double forceLabelFontSize;
 
     @override
-    Offset operator +(Offset other) => Offset(position.dx + other.dx, position.dy + other.dy);
-    Offset operator -(Offset other) => Offset(position.dx - other.dx, position.dy - other.dy);
+    Offset operator +(Offset other) => Offset(_position.dx + other.dx, _position.dy + other.dy);
+    Offset operator -(Offset other) => Offset(_position.dx - other.dx, _position.dy - other.dy);
 
     @override
-    Offset get center => position;
+    Offset get center => _position;
 
     @override
-    void set center(Offset p) => position = p;
+    Offset get position => _position;
+
+    @override
+    void set position(Offset p) => _position = p;
 
     @override
     List<Node> getElementNodes() {
@@ -90,10 +97,10 @@ class Node extends EditorElement {
     @override
     bool? click(Window window, Offset mouseWorldClick) {
         selected = Rect.fromCircle(
-            center: position,
+            center: _position,
             radius: radius,
         ).contains(mouseWorldClick);
-        selected = isPointInCircle(mouseWorldClick, position, radius * (1 / window.zoom));
+        selected = isPointInCircle(mouseWorldClick, _position, radius * (1 / window.zoom));
         return selected;
     }
 
@@ -171,15 +178,15 @@ class Beam extends EditorElement {
     final double centerCrossLength = 7;
 
     @override
-    Offset get position => center;
-
-    @override
     Offset get center => Offset(start.position.dx + end.position.dx, start.position.dy + end.position.dy) / 2;
 
     @override
-    void set center(Offset value) {
+    Offset get position => center;
+
+    @override
+    void set position(Offset value) {
         final offset = center - value;
-        start.center -= offset;
+        start.position -= offset;
         end.position -= offset;
     }
 
@@ -334,7 +341,7 @@ class Editor {
         this.nodes = const [],
         this.selectedElements = const [],
         this.beams = const [],
-        this.dragBox = const Offset(double.infinity, double.infinity),
+        this.dragBox = infinityOffset,
         this.dragBoxRadius = 10,
     }) {
         nodes = [
@@ -643,8 +650,8 @@ class BoxSelection {
     BoxSelection(this.start, this.end);
     BoxSelection.fromStart(Offset start) : start = start, end = start;
     BoxSelection.infinity()
-        : start = Offset(double.infinity, double.infinity),
-          end = Offset(double.infinity, double.infinity);
+        : start = infinityOffset,
+          end = infinityOffset;
 
     Offset start;
     Offset end;

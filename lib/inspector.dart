@@ -19,7 +19,7 @@ class Inspector extends StatefulWidget {
         super.key,
         this.width = 400,
         this.height = 1080,
-        this.color = const Color.fromRGBO(73, 162, 255, 128),
+        this.color = const Color.fromRGBO(73, 162, 255, 128), 
         this.title = "Inspector",
         this.child,
     });
