@@ -31,6 +31,7 @@ abstract class EditorElement {
     void render(Window window, Painter painter) {}
 }
 
+/// NodeFixator describes allowed movement of a node.
 /// h — horisontal, v — vertical, t — turn
 enum NodeFixator {
     hvt,
@@ -235,7 +236,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
     }
     @override
     void processInput(Editor editor, Window window, Input input) {
-        if (!editor.selectedElements.isEmpty && !input.isMouseDown) {
+        if (!editor.selectedElements.isEmpty && (!input.isLMBDown)) {
             editor.changeSelectionState(EditorDoneSelectionState(editor));
         }
 
@@ -256,7 +257,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
         } else {
             final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list.reversed.toList()) {
-                final click = c.click(window, input.mouseWorldClick);
+                final click = c.click(window, input.lMBWorldClick);
                 if (click != null && click) {
                     if (editor.selectedElements.isEmpty) {
                         editor.selectedElements.add(c);
@@ -278,9 +279,9 @@ class EditorDoneSelectionState extends EditorSelectionState {
             radius: editor.dragBoxRadius * (1 / window.zoom),
         ).contains(input.mousePosWorld);
 
-        if (input.isMouseDown && mouseInDragBox) {
+        if (input.isLMBDown && mouseInDragBox) {
             editor.changeSelectionState(EditorDragSelectionState(editor));
-        } else if (input.isMouseDown && !mouseInDragBox) {
+        } else if (input.isLMBDown && !mouseInDragBox) {
             editor.changeSelectionState(EditorProcessSelectionState(editor));
         }
     }
@@ -290,7 +291,7 @@ class EditorDragSelectionState extends EditorSelectionState {
     EditorDragSelectionState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {
-        if (!input.isMouseDown) {
+        if (!input.isLMBDown) {
             editor.changeSelectionState(EditorDoneSelectionState(editor));
         } else {
             final Set<Node> nodes = {};
@@ -387,7 +388,7 @@ class Editor {
     /// Input Grid
     void drawBoxSelection(Window window, Painter painter, Input input) {
         final selection = input.boxSelectionWorld;
-        if (input.isMouseDown && selection.start != selection.end) {
+        if (input.isLMBDown && selection.start != selection.end) {
             painter.setPaint(color: boxSelectionColor, width: 1);
             painter.drawCircle(window, window.worldToScreen(selection.start), 10);
             painter.drawCircle(window, window.worldToScreen(selection.end), 10);

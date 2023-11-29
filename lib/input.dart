@@ -16,10 +16,14 @@ class Input {
         this.mousePosWorld = const Offset(0, 0),
         this.mouseWorldDelta = const Offset(0, 0),
         this.mouseDelta = const Offset(0, 0),
-        this.mouseDown = const Offset(0, 0),
-        this.mouseUp = const Offset(0, 0),
-        this.mouseWorldClick = const Offset(0, 0),
-        this.isMouseDown = false,
+        this.lMBWorldClick = const Offset(0, 0),
+        this.rMBWorldClick = const Offset(0, 0),
+        this.lMBDown = const Offset(0, 0),
+        this.lMBUp = const Offset(0, 0),
+        this.rMBDown = const Offset(0, 0),
+        this.rMBUp = const Offset(0, 0),
+        this.isLMBDown = false,
+        this.isRMBDown = false,
     });
 
     final double _mouseSensitivity = 0.001;
@@ -27,11 +31,15 @@ class Input {
     Offset mousePosWorld;
     Offset mouseWorldDelta;
     Offset mouseDelta;
-    Offset mouseDown;
-    Offset mouseUp;
-    Offset mouseWorldClick;
+    Offset lMBWorldClick;
+    Offset rMBWorldClick;
+    Offset lMBDown;
+    Offset lMBUp;
+    Offset rMBDown;
+    Offset rMBUp;
+    bool isLMBDown;
+    bool isRMBDown;
     late PointerEvent lastPointerEvent;
-    bool isMouseDown;
     BoxSelection boxSelectionWorld = BoxSelection.infinity();
 
     void handlePointerMove(Window window, PointerEvent event) {
@@ -41,40 +49,51 @@ class Input {
         mousePosWorld = curMousePosWorld;
 
         if (event is PointerMoveEvent) {
-            if (event.buttons == 2 || event.buttons == 4) {
+            if ([2, 4].contains(event.buttons)) {
                 window.pan += mouseDelta;
             } else if (event.buttons == 1) {
                 boxSelectionWorld.end = mousePosWorld;
-            } else if (event.buttons == 1 && (event.buttons == 2 || event.buttons == 4)) {
+            } else if (event.buttons == 1 && [2, 4].contains(event.buttons)) {
                 window.pan += mouseDelta;
                 boxSelectionWorld.end = mousePosWorld;
             }
-        } else if (event is PointerHoverEvent) {
+        } /*else if (event is PointerHoverEvent) {
             // ...
-        }
+        }*/
     }
 
     void handlePointerUp(Window window, PointerEvent event) {
-        //print(event);
-        if (event is PointerUpEvent) {
-            mouseUp = event.position;
-            if(mouseUp == mouseDown) {// && event.buttons == 1) {
-                mouseWorldClick = window.screenToWorld(mouseDown);
+        isLMBDown = false;
+        isRMBDown = false;
+        if (event.buttons == 1) {
+            lMBUp = event.position;
+            if (lMBUp == lMBDown) {
+                lMBWorldClick = window.screenToWorld(lMBDown);
             }
-            isMouseDown = false;            
+        } else if ([2, 4].contains(event.buttons)) {
+            rMBUp = event.position;
+            if (rMBUp == rMBDown) {
+                rMBWorldClick = window.screenToWorld(rMBDown);
+            }
         }
     }
 
     void handlePointerDown(Window window, PointerEvent event) {
-        //print(event);
-        if (event is PointerDownEvent) {
-            mouseDown = event.position;
-            isMouseDown = true;
-
-            if(event.buttons == 1) {
-                boxSelectionWorld = BoxSelection.fromStart(window.screenToWorld(event.position));
-            }
+        if (event.buttons == 1) {
+            lMBDown = event.position;
+            boxSelectionWorld = BoxSelection.fromStart(window.screenToWorld(lMBDown));
+            isLMBDown = true;
+        } else if ([2, 4].contains(event.buttons)) {
+            rMBDown = event.position;
+            boxSelectionWorld = BoxSelection.fromStart(window.screenToWorld(rMBDown));
+            isRMBDown = true;
         }
+        /*
+        print('isLMBDown');
+        print(isLMBDown);
+        print('isRMBDown');
+        print(isRMBDown);
+        */
     }
 
     void handlePointerScroll(Window window, PointerScrollEvent event) {
