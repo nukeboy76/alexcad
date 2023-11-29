@@ -187,7 +187,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
-                            widget.node.position = value;
+                            widget.node.force = value;
                         });
                     },
                     offset: widget.node.force,
@@ -259,7 +259,7 @@ class OffsetWidget extends StatelessWidget {
                         ),
                         Flexible(
                             child: TextField(
-                                controller: TextEditingController(text: offset.dx.toString()),
+                                controller: TextEditingController(text: offset.dx.toStringAsFixed(6)),
                                 decoration: InputDecoration(labelText: labelX),
                                 keyboardType: TextInputType.number,
                                 inputFormatters: <TextInputFormatter>[
@@ -270,7 +270,7 @@ class OffsetWidget extends StatelessWidget {
                         ),
                         Flexible(
                             child: TextField(
-                                controller: TextEditingController(text: offset.dy.toString()),
+                                controller: TextEditingController(text: offset.dy.toStringAsFixed(6)),
                                 decoration: InputDecoration(labelText: labelY),
                                 keyboardType: TextInputType.number,
                                 inputFormatters: <TextInputFormatter>[
@@ -317,7 +317,7 @@ class SingleValueWidget extends StatelessWidget {
                         ),
                         Flexible(
                             child: TextField(
-                                controller: TextEditingController(text: value.toString()),
+                                controller: TextEditingController(text: value.toStringAsFixed(6)),
                                 decoration: InputDecoration(labelText: label),
                                 keyboardType: TextInputType.number,
                                 inputFormatters: <TextInputFormatter>[

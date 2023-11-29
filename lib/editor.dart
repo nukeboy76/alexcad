@@ -52,6 +52,8 @@ class Node extends EditorElement {
         this.fixator = NodeFixator.disabled,
         this.radius = 10,
         this.fixatorRadius = 15,
+        this.forceLabelOffset = 17,
+        this.forceLabelFontSize = 12,
     });
 
     /// Data
@@ -64,7 +66,8 @@ class Node extends EditorElement {
     bool selected;
     final double radius;
     final double fixatorRadius;
-
+    final double forceLabelOffset;
+    final double forceLabelFontSize;
 
     @override
     Offset operator +(Offset other) => Offset(position.dx + other.dx, position.dy + other.dy);
@@ -100,6 +103,34 @@ class Node extends EditorElement {
         return selected;
     }
 
+    void drawForces(Window window, Painter painter) {
+        if (force.dx != 0 || force.dy != 0) {
+            painter.drawText(
+                window: window,
+                text: 'x: ${force.dx.toStringAsFixed(2)}',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: Color.fromRGBO(255, 255, 255, 0),
+                textOffset: window.worldToScreen(center) + Offset(0, -forceLabelOffset),
+                outline: true,
+                centerAlignX: true,
+                centerAlignY: true,
+            );
+            painter.drawText(
+                window: window,
+                text: 'y: ${force.dy.toStringAsFixed(2)}',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: Color.fromRGBO(255, 255, 255, 0),
+                textOffset: window.worldToScreen(center) + Offset(0, forceLabelOffset),
+                outline: true,
+                outlineSize: 1,
+                centerAlignX: true,
+                centerAlignY: true,
+            );
+        }
+    }
+
     @override
     void render(Window window, Painter painter) {
         if (fixator != NodeFixator.disabled) {
@@ -114,6 +145,7 @@ class Node extends EditorElement {
         }
         painter.setPaint(color: selected ? Colors.orange : Colors.grey);
         painter.drawCircle(window, window.worldToScreen(center), radius);
+        drawForces(window, painter);
     }
 }
 
@@ -551,9 +583,13 @@ class EditorBar extends StatefulWidget {
 
     Editor editor;
     List<bool> selectionMode = [true, false];
+    static bool _showElementsData = false;
 
     bool get isBeamSelectionMode => selectionMode[0];
     bool get isNodeSelectionMode => selectionMode[1];
+
+    bool get isDataHide => _showElementsData;
+    void set isDataHide(bool value) => _showElementsData = value;
 
     void unselectAllElements() {
         editor.resetSelectionState();
@@ -567,24 +603,49 @@ class _EditorBarState extends State<EditorBar> {
     @override
     Widget build(BuildContext context) {
         return Container(
-            child: ToggleButtons(
-                onPressed: (int index) {
-                    setState(() {
-                        widget.unselectAllElements();
-                        for (int i = 0; i < widget.selectionMode.length; i++) {
-                            widget.selectionMode[i] = i == index;
-                        }
-                    });
-                },
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                selectedBorderColor: Colors.blue[700],
-                selectedColor: Colors.white,
-                disabledBorderColor: Color.fromRGBO(255, 255, 255, 1.0),
-                disabledColor: Color.fromRGBO(255, 255, 255, 1.0),
-                fillColor: Colors.blue[200],
-                color: Colors.blue[400],
-                isSelected: widget.selectionMode,
-                children: selectionModeIcons,
+            child: Row(
+                children: [
+                    ToggleButtons(
+                        onPressed: (int index) {
+                            setState(() {
+                                widget.unselectAllElements();
+                                for (int i = 0; i < widget.selectionMode.length; i++) {
+                                    widget.selectionMode[i] = i == index;
+                                }
+                            });
+                        },
+                        borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        selectedBorderColor: Colors.blue[700],
+                        selectedColor: Colors.white,
+                        disabledBorderColor: Color.fromRGBO(255, 255, 255, 1.0),
+                        disabledColor: Color.fromRGBO(255, 255, 255, 1.0),
+                        fillColor: Colors.blue[200],
+                        color: Colors.blue[400],
+                        isSelected: widget.selectionMode,
+                        children: selectionModeIcons,
+                    ),
+                    /*
+                    ToggleButtons(
+                        onPressed: (int index) {
+                            setState(() {
+                                widget.unselectAllElements();
+                                for (int i = 0; i < widget.selectionMode.length; i++) {
+                                    widget.selectionMode[i] = i == index;
+                                }
+                            });
+                        },
+                        borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        selectedBorderColor: Colors.blue[700],
+                        selectedColor: Colors.white,
+                        disabledBorderColor: Color.fromRGBO(255, 255, 255, 1.0),
+                        disabledColor: Color.fromRGBO(255, 255, 255, 1.0),
+                        fillColor: Colors.blue[200],
+                        color: Colors.blue[400],
+                        isSelected: widget.selectionMode,
+                        children: ,
+                    ),
+                    */
+                ],
             ),
         );
     }

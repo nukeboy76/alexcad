@@ -35,6 +35,7 @@ class Painter {
         required Color bgColor,
         required Color textColor,
         required Offset textOffset,
+        double outlineSize = 1.5,
         bool outline = false,
         bool centerAlignX = false,
         bool centerAlignY = false,
@@ -45,19 +46,19 @@ class Painter {
             background: Paint()..color = bgColor,
             shadows: outline ? [
                 Shadow( // bottomLeft
-                    offset: Offset(-1.5, -1.5),
+                    offset: Offset(-outlineSize, -outlineSize),
                     color: Colors.white
                 ),
                 Shadow( // bottomRight
-                    offset: Offset(1.5, -1.5),
+                    offset: Offset(outlineSize, -outlineSize),
                     color: Colors.white
                 ),
                 Shadow( // topRight
-                    offset: Offset(1.5, 1.5),
+                    offset: Offset(outlineSize, outlineSize),
                     color: Colors.white
                 ),
                 Shadow( // topLeft
-                    offset: Offset(-1.5, 1.5),
+                    offset: Offset(-outlineSize, outlineSize),
                     color: Colors.white
                 ),
             ] : null,
