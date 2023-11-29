@@ -1,15 +1,18 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 
 class Window {
+    Window({
+        this.zoom = 20,
+        this.pan = const Offset(250, 250),
+    });
     late Canvas canvas;
     late Size _size;
 
-    double zoom = 20;
-    Offset pan = Offset(500, 500);
+    double zoom;
+    Offset pan;
     
     final double zoomMin = 5.00;
     final double zoomMax = 40.0;

@@ -13,12 +13,15 @@ import 'window.dart';
 import 'utils/utils.dart';
 
 abstract class EditorElement {
+    EditorElement({
+        this.selected = false,
+        this.position = const Offset(double.infinity, double.infinity),
+    });
+
     Offset get center;
     void set center(Offset p);
     Offset position;
     bool selected;
-
-    EditorElement({this.selected = false, this.position = const Offset(double.infinity, double.infinity)});
 
     List<Node> getElementNodes() => [];
     void refreshGrid() {}
@@ -43,20 +46,23 @@ enum NodeFixator {
 class Node extends EditorElement {
     Node(this.position, {
         this.selected = false,
-        this.force = const Offset(1, 1),
-        this.nodeFixator = NodeFixator.disabled,
+        this.force = const Offset(0, 0),
+        this.torqueForce = 0,
+        this.fixator = NodeFixator.disabled,
+        this.radius = 10,
+        this.fixatorRadius = 15,
     });
 
     /// Data
     Offset position;
     Offset force;
     double torqueForce;
-    NodeFixator nodeFixator;
+    NodeFixator fixator;
 
     /// UI
     bool selected;
-    final double radius = 10;
-    final double nodeFixatorRadius = 15;
+    final double radius;
+    final double fixatorRadius;
 
 
     @override
@@ -95,13 +101,13 @@ class Node extends EditorElement {
 
     @override
     void render(Window window, Painter painter) {
-        if (nodeFixator != NodeFixator.disabled) {
+        if (fixator != NodeFixator.disabled) {
             painter.setPaint(color: selected ? Colors.orange.shade400 : Colors.grey.shade400);
             painter.drawRect(
                 window,
                 Rect.fromCircle(
                     center: window.worldToScreen(center),
-                    radius: nodeFixatorRadius,
+                    radius: fixatorRadius,
                 ),
             );
         }
@@ -120,9 +126,9 @@ class Beam extends EditorElement {
     Beam({
         required this.start,
         required this.end,
-        this.force = const Offset(1, 1),
-        this.section = BeamSection.rect,
+        this.force = const Offset(0, 0),
         this.width = 1,
+        this.section = BeamSection.rect,
         this.sectionArea = 1,
         this.elasticity = 1,
         this.tension = 1,
@@ -132,11 +138,11 @@ class Beam extends EditorElement {
     Node end;
 
     Offset force;
-    BeamSection section;
     double width;
     double sectionArea;
     double elasticity;
     double tension;
+    BeamSection section;
 
     bool selected = false;
 
@@ -311,9 +317,9 @@ class Editor {
         this.dragBoxRadius = 10,
     }) {
         nodes = [
-            Node(Offset(0, 0), nodeFixator: NodeFixator.hvt),
+            Node(Offset(0, 0), fixator: NodeFixator.hvt),
             Node(Offset(1, 0)),
-            Node(Offset(5, 0), nodeFixator: NodeFixator.hvt),
+            Node(Offset(5, 0), fixator: NodeFixator.hvt),
             Node(Offset(9, 10)),
             Node(Offset(-5, 5)),
             Node(Offset(-9, 0)),
@@ -560,11 +566,6 @@ class _EditorBarState extends State<EditorBar> {
     @override
     Widget build(BuildContext context) {
         return Container(
-            decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.black, width: 0.5),
-                borderRadius: BorderRadius.all(Radius.circular(8.0)),
-            ),
             child: ToggleButtons(
                 onPressed: (int index) {
                     setState(() {

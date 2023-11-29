@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
+//import 'package:window_manager/window_manager.dart';
 
 import 'app_icons.dart';
 import 'editor.dart';
@@ -13,9 +13,9 @@ import 'window.dart';
 
 
 void main() async{
-    WidgetsFlutterBinding.ensureInitialized();
-    await windowManager.ensureInitialized();
-    WindowManager.instance.setMinimumSize(const Size(600, 400));
+    //WidgetsFlutterBinding.ensureInitialized();
+    //await windowManager.ensureInitialized();
+    //WindowManager.instance.setMinimumSize(const Size(600, 400));
     runApp(const MyApp());
 }
 
