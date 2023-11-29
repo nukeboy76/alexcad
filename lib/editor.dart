@@ -9,8 +9,24 @@ import 'app_icons.dart';
 import 'input.dart';
 import 'inspector.dart';
 import 'painter.dart';
-import 'window.dart';
+import 'types.dart';
 import 'utils/utils.dart';
+import 'window.dart';
+
+
+abstract class EditorView {
+    EditorView({
+        this.editorElement,
+    });
+
+    final editorElement;
+
+    void render(Window window, Painter painter) {}
+    bool? click(Window window, Offset mouseWorldClick) {}
+    bool? boxSelect(BoxSelection selection) {}
+    void refreshCanvasData() {}
+}
+
 
 abstract class EditorElement {
     EditorElement({
@@ -22,29 +38,14 @@ abstract class EditorElement {
     void set position(Offset p);
     bool selected;
 
-    //InspectorView inspectorView;
-    //EditorView editorView;
+    late InspectorView inspectorView;
+    late EditorView editorView;
 
     List<Node> getElementNodes() => [];
-    void refreshGrid() {}
     void moveByDelta(Offset delta) {}
-    bool? click(Window window, Offset mouseWorldClick) {}
-    bool? boxSelect(BoxSelection selection) {}
     void render(Window window, Painter painter) {}
 }
 
-/// NodeFixator describes allowed movement of a node.
-/// h — horisontal, v — vertical, t — turn
-enum NodeFixator {
-    hvt,
-    hv,
-    ht,
-    vt,
-    h,
-    t,
-    v,
-    disabled,
-}
 
 class Node extends EditorElement {
     Node(Offset position, {
@@ -52,12 +53,10 @@ class Node extends EditorElement {
         this.force = const Offset(0, 0),
         this.torqueForce = 0,
         this.fixator = NodeFixator.disabled,
-        this.radius = 10,
-        this.fixatorRadius = 15,
-        this.forceLabelOffset = 17,
-        this.forceLabelFontSize = 12,
     }) {
         this._position = position;
+        this.editorView = NodeEditorView(this);
+        this.inspectorView = NodeInspectorView(this);
     }
 
     /// Data
@@ -66,12 +65,10 @@ class Node extends EditorElement {
     double torqueForce;
     NodeFixator fixator;
 
-    /// UI
     bool selected;
-    final double radius;
-    final double fixatorRadius;
-    final double forceLabelOffset;
-    final double forceLabelFontSize;
+
+    late EditorView editorView;
+    late InspectorView inspectorView;
 
     @override
     Offset operator +(Offset other) => Offset(_position.dx + other.dx, _position.dy + other.dy);
@@ -90,65 +87,78 @@ class Node extends EditorElement {
     List<Node> getElementNodes() {
         return [this];
     }
+}
+
+
+class NodeEditorView extends EditorView {
+    NodeEditorView(this.editorElement, {
+        this.radius = 10,
+        this.fixatorRadius = 15,
+        this.forceLabelOffset = 17,
+        this.forceLabelFontSize = 12,
+    });
+
+    final editorElement;
+
+    final double radius;
+    final double fixatorRadius;
+    final double forceLabelOffset;
+    final double forceLabelFontSize;
 
     @override
-    void refreshGrid() {}
+    void render(Window window, Painter painter) {
+        if (editorElement.fixator != NodeFixator.disabled) {
+            painter.setPaint(color: editorElement.selected ? Colors.orange.shade400 : Colors.grey.shade400);
+            painter.drawRect(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(editorElement.center),
+                    radius: fixatorRadius,
+                ),
+            );
+        }
+        painter.setPaint(color: editorElement.selected ? Colors.orange : Colors.grey);
+        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
+        drawForces(window, painter);
+    }
 
     @override
     bool? click(Window window, Offset mouseWorldClick) {
-        selected = Rect.fromCircle(
-            center: _position,
+        editorElement.selected = Rect.fromCircle(
+            center: editorElement.position,
             radius: radius,
         ).contains(mouseWorldClick);
-        selected = isPointInCircle(mouseWorldClick, _position, radius * (1 / window.zoom));
-        return selected;
+        editorElement.selected = isPointInCircle(mouseWorldClick, editorElement.position, radius * (1 / window.zoom));
+        return editorElement.selected;
     }
 
     @override
     bool? boxSelect(BoxSelection selection) {
-        selected = isPointInRect(center, selection.start, selection.end);
-        return selected;
+        editorElement.selected = isPointInRect(editorElement.center, selection.start, selection.end);
+        return editorElement.selected;
     }
 
+    @override
+    void refreshCanvasData() {}
+
     void drawForces(Window window, Painter painter) {
-        if (force.dx != 0 || force.dy != 0) {
+        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
             painter.drawText(
                 window: window,
-                text: '[${force.dx.toStringAsFixed(2)}; ${force.dy.toStringAsFixed(2)}]',
+                text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
-                bgColor: Colors.white,
-                textOffset: window.worldToScreen(center) + Offset(0, -forceLabelOffset),
+                bgColor: Color(0x00ffffff),
+                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
                 outline: true,
+                outlineSize: 1.25,
                 centerAlignX: true,
                 centerAlignY: true,
             );
         }
     }
-
-    @override
-    void render(Window window, Painter painter) {
-        if (fixator != NodeFixator.disabled) {
-            painter.setPaint(color: selected ? Colors.orange.shade400 : Colors.grey.shade400);
-            painter.drawRect(
-                window,
-                Rect.fromCircle(
-                    center: window.worldToScreen(center),
-                    radius: fixatorRadius,
-                ),
-            );
-        }
-        painter.setPaint(color: selected ? Colors.orange : Colors.grey);
-        painter.drawCircle(window, window.worldToScreen(center), radius);
-        drawForces(window, painter);
-    }
 }
 
-enum BeamSection {
-    arbitrary,
-    rect,
-    round,
-}
 
 class Beam extends EditorElement {
     Beam({
@@ -156,11 +166,15 @@ class Beam extends EditorElement {
         required this.end,
         this.force = const Offset(0, 0),
         this.width = 1,
-        this.section = BeamSection.rect,
         this.sectionArea = 1,
         this.elasticity = 1,
         this.tension = 1,
-    }) : assert(start != end);
+        this.section = BeamSection.rect,
+        this.selected = false,
+    }) : assert(start != end) {
+        this.editorView = BeamEditorView(this);
+        this.inspectorView = BeamInspectorView(this);
+    }
 
     Node start;
     Node end;
@@ -172,10 +186,10 @@ class Beam extends EditorElement {
     double tension;
     BeamSection section;
 
-    bool selected = false;
+    bool selected;
 
-    late Offset a, b, c, d;
-    final double centerCrossLength = 7;
+    late EditorView editorView;
+    late InspectorView inspectorView;
 
     @override
     Offset get center => Offset(start.position.dx + end.position.dx, start.position.dy + end.position.dy) / 2;
@@ -207,40 +221,67 @@ class Beam extends EditorElement {
         start.position -= delta;
         end.position -= delta;
     }
+}
+
+
+class BeamEditorView extends EditorView {
+    BeamEditorView(this.editorElement, {
+        this.centerCrossLength = 7,
+    });
+
+    final editorElement;
+
+    late Offset a, b, c, d;
+    final double centerCrossLength;
 
     @override
-    void refreshGrid() {
-        a = rotatePoint(start.position, Offset(start.position.dx, start.position.dy + width / 2), rotation);
-        b = rotatePoint(start.position, Offset(start.position.dx, start.position.dy - width / 2), rotation);
-        c = rotatePoint(end.position, Offset(end.position.dx, end.position.dy + width / 2), rotation);
-        d = rotatePoint(end.position, Offset(end.position.dx, end.position.dy - width / 2), rotation);
+    void render(Window window, Painter painter) {
+        final color = editorElement.selected ? Colors.orange : Colors.grey.shade700;
+        painter.setPaint(color: color);
+        painter.drawQuad(window, a, b, c, d);
+
+        final screenCenter = window.worldToScreen(editorElement.center);
+        painter.setPaint(color: editorElement.selected ? Colors.orange.shade700 : Colors.grey.shade900);
+        for (final d in directions) {
+            painter.drawLine(window, screenCenter + d * centerCrossLength, screenCenter - d * centerCrossLength);
+        }
     }
 
     @override
     bool? click(Window window, Offset mouseWorldClick) {
-        refreshGrid();
-
-        selected = isPointInQuad(mouseWorldClick, a, b, c, d);
-        return selected;
+        refreshCanvasData();
+        editorElement.selected = isPointInQuad(mouseWorldClick, a, b, c, d);
+        return editorElement.selected;
     }
 
     @override
     bool? boxSelect(BoxSelection selection) {
-        selected = isPointInRect(center, selection.start, selection.end);
-        return selected;
+        editorElement.selected = isPointInRect(editorElement.center, selection.start, selection.end);
+        return editorElement.selected;
     }
 
     @override
-    void render(Window window, Painter painter) {
-        final color = selected ? Colors.orange : Colors.grey.shade700;
-        painter.setPaint(color: color);
-        painter.drawQuad(window, a, b, c, d);
-
-        final screenCenter = window.worldToScreen(center);
-        painter.setPaint(color: selected ? Colors.orange.shade700 : Colors.grey.shade900);
-        for (final d in directions) {
-            painter.drawLine(window, screenCenter + d * centerCrossLength, screenCenter - d * centerCrossLength);
-        }
+    void refreshCanvasData() {
+        a = rotatePoint(
+            editorElement.start.position,
+            Offset(editorElement.start.position.dx, editorElement.start.position.dy + editorElement.width / 2),
+            editorElement.rotation,
+        );
+        b = rotatePoint(
+            editorElement.start.position,
+            Offset(editorElement.start.position.dx, editorElement.start.position.dy - editorElement.width / 2),
+            editorElement.rotation,
+        );
+        c = rotatePoint(
+            editorElement.end.position,
+            Offset(editorElement.end.position.dx, editorElement.end.position.dy + editorElement.width / 2),
+            editorElement.rotation,
+        );
+        d = rotatePoint(
+            editorElement.end.position,
+            Offset(editorElement.end.position.dx, editorElement.end.position.dy - editorElement.width / 2),
+            editorElement.rotation,
+        );
     }
 }
 
@@ -249,11 +290,13 @@ abstract class EditorSelectionState {
     void processInput(Editor editor, Window window, Input input) {}
 }
 
+
 class EditorInitialSelectionState extends EditorSelectionState {
     EditorInitialSelectionState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {}
 }
+
 
 class EditorProcessSelectionState extends EditorSelectionState {
     EditorProcessSelectionState(Editor editor) {
@@ -274,7 +317,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
         if (start != end) {
             final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list) {
-                final select = c.boxSelect(input.boxSelectionWorld);
+                final select = c.editorView.boxSelect(input.boxSelectionWorld);
                 if (select != null) {
                     if (select) {
                         editor.selectedElements.add(c);
@@ -284,7 +327,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
         } else {
             final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list.reversed.toList()) {
-                final click = c.click(window, input.lMBWorldClick);
+                final click = c.editorView.click(window, input.lMBWorldClick);
                 if (click != null && click) {
                     if (editor.selectedElements.isEmpty) {
                         editor.selectedElements.add(c);
@@ -296,6 +339,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
         }
     }
 }
+
 
 class EditorDoneSelectionState extends EditorSelectionState {
     EditorDoneSelectionState(Editor editor);
@@ -313,6 +357,7 @@ class EditorDoneSelectionState extends EditorSelectionState {
         }
     }
 }
+
 
 class EditorDragSelectionState extends EditorSelectionState {
     EditorDragSelectionState(Editor editor);
@@ -335,6 +380,7 @@ class EditorDragSelectionState extends EditorSelectionState {
         }
     }
 }
+
 
 class Editor {
     Editor({
@@ -432,14 +478,14 @@ class Editor {
     /// Rendering
     void drawBeams(Window window, Painter painter) {
         for (final c in beams) {
-            c.refreshGrid();
-            c.render(window, painter);
+            c.editorView.refreshCanvasData();
+            c.editorView.render(window, painter);
         }
     }
 
     void drawNodes(Window window, Painter painter) {
         for (final n in nodes) {
-            n.render(window, painter);
+            n.editorView.render(window, painter);
         }   
     }
 
@@ -480,6 +526,7 @@ class Editor {
         drawBoxSelection(window, painter, input);
     }
 }
+
 
 class Grid {
     void draw(Window window, Painter painter) {
@@ -573,6 +620,7 @@ class Grid {
     }
 }
 
+
 class EditorBar extends StatefulWidget {
     EditorBar(Editor this.editor);
 
@@ -593,6 +641,7 @@ class EditorBar extends StatefulWidget {
     @override
     State<EditorBar> createState() => _EditorBarState();
 }
+
 
 class _EditorBarState extends State<EditorBar> {
     @override
@@ -645,6 +694,7 @@ class _EditorBarState extends State<EditorBar> {
         );
     }
 }
+
 
 class BoxSelection {
     BoxSelection(this.start, this.end);

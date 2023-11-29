@@ -7,15 +7,18 @@ class Window {
     Window({
         this.zoom = 20,
         this.pan = const Offset(250, 250),
+        this.zoomMin = 5,
+        this.zoomMax = 40,
     });
+
     late Canvas canvas;
     late Size _size;
 
     double zoom;
     Offset pan;
     
-    final double zoomMin = 5.00;
-    final double zoomMax = 40.0;
+    final double zoomMin;
+    final double zoomMax;
 
     double get width => _size.width;
     double get height => _size.height;

@@ -7,11 +7,35 @@ import 'app_icons.dart';
 import 'editor.dart';
 import 'input.dart';
 import 'painter.dart';
-import 'window.dart';
+import 'types.dart';
 import 'utils/utils.dart';
+import 'window.dart';
 
 
 const String defaultTextInputRegExpTemplate = '[0-9\.\-]';
+
+
+abstract class InspectorView {
+    Widget get widget;
+}
+
+
+class NodeInspectorView extends InspectorView {
+    NodeInspectorView(this.element);
+
+    final element;
+
+    Widget get widget => NodeWidget(node: element);
+}
+
+
+class BeamInspectorView extends InspectorView {
+    BeamInspectorView(this.element);
+
+    final element;
+
+    Widget get widget => BeamWidget(beam: element);
+}
 
 
 class Inspector extends StatefulWidget {
@@ -50,12 +74,7 @@ class _InspectorState extends State<Inspector> {
             child: ListView(
                 children: [
                     Text("${widget.title}"),
-                    selectedElementsLength != 1 ? Row() : selectedIsBeam ?
-                        BeamWidget(
-                            beam: widget.selectedElements[0],
-                        ) : NodeWidget(
-                            node: widget.selectedElements[0],
-                        ),
+                    selectedElementsLength != 1 ? Row() : widget.selectedElements[0].inspectorView.widget,
                 ],
             ),
         );
@@ -166,6 +185,7 @@ class NodeWidget extends StatefulWidget {
     @override
     State<NodeWidget> createState() => _NodeWidgetState();
 }
+
 
 class _NodeWidgetState extends State<NodeWidget> {
     @override

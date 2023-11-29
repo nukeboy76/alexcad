@@ -19,6 +19,7 @@ void main() async{
     runApp(const MyApp());
 }
 
+
 class MyApp extends StatelessWidget {
     const MyApp({super.key});
 
@@ -37,12 +38,14 @@ class MyApp extends StatelessWidget {
     }
 }
 
+
 class CADEditor extends StatefulWidget {
     const CADEditor({super.key});
 
     @override
     State<CADEditor> createState() => _CADEditorState();
 }
+
 
 class _CADEditorState extends State<CADEditor> {
     Window window = Window();
@@ -99,6 +102,7 @@ class _CADEditorState extends State<CADEditor> {
         });
     }
 
+
     @override
     Widget build(BuildContext context) {
         return Row( 
@@ -123,7 +127,7 @@ class _CADEditorState extends State<CADEditor> {
                                         child: Container(
                                             width: MediaQuery.of(context).size.width - inspectorWidth,
                                             height: MediaQuery.of(context).size.height,
-                                            color: const Color(0xffffffff),
+                                            color: Colors.white,
                                             child: CustomPaint(
                                                 //size: Size.infinite,
                                                 painter: CADEditorRenderer(
