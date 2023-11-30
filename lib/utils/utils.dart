@@ -3,8 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 
-const Offset infinityOffset = Offset(double.infinity, double.infinity);
-
 final List<Offset> directions = [
     Offset(1, 0),
     Offset(0, 1),
@@ -50,6 +48,10 @@ Offset rotatePoint(Offset center, Offset point, double angle) {
     point = Offset(point.dx - center.dx, point.dy - center.dy);
 
     return Offset(point.dx * c - point.dy * s + center.dx, point.dx * s + point.dy * c + center.dy);
+}
+
+Offset lerpOffset(Offset a, Offset b, double t) {
+    return Offset(a.dx * (1.0 - t) + b.dx * t, a.dy * (1.0 - t) + b.dy * t);
 }
 
 double roundToPower(double value) {

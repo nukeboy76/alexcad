@@ -22,6 +22,7 @@ abstract class EditorView {
     final editorElement;
 
     void render(Window window, Painter painter) {}
+    void renderUI(Window window, Painter painter) {}
     bool? click(Window window, Offset mouseWorldClick) {}
     bool? boxSelect(BoxSelection selection) {}
     void refreshCanvasData() {}
@@ -60,7 +61,7 @@ class Node extends EditorElement {
     }
 
     /// Data
-    Offset _position = infinityOffset;
+    Offset _position = Offset.infinite;
     Offset force;
     double torqueForce;
     NodeFixator fixator;
@@ -119,7 +120,25 @@ class NodeEditorView extends EditorView {
         }
         painter.setPaint(color: editorElement.selected ? Colors.orange : Colors.grey);
         painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
-        drawForces(window, painter);
+    }
+
+    @override
+    void renderUI(Window window, Painter painter) {
+
+        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
+            painter.drawText(
+                window: window,
+                text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: Color(0x00ffffff),
+                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
+                outline: true,
+                outlineSize: 1.25,
+                centerAlignX: true,
+                centerAlignY: true,
+            );
+        }
     }
 
     @override
@@ -140,23 +159,6 @@ class NodeEditorView extends EditorView {
 
     @override
     void refreshCanvasData() {}
-
-    void drawForces(Window window, Painter painter) {
-        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
-            painter.drawText(
-                window: window,
-                text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
-                fontSize: forceLabelFontSize,
-                textColor: Colors.black,
-                bgColor: Color(0x00ffffff),
-                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
-                outline: true,
-                outlineSize: 1.25,
-                centerAlignX: true,
-                centerAlignY: true,
-            );
-        }
-    }
 }
 
 
@@ -227,12 +229,16 @@ class Beam extends EditorElement {
 class BeamEditorView extends EditorView {
     BeamEditorView(this.editorElement, {
         this.centerCrossLength = 7,
+        this.forceLabelOffset = 17,
+        this.forceLabelFontSize = 12,
     });
 
     final editorElement;
 
     late Offset a, b, c, d;
     final double centerCrossLength;
+    final double forceLabelOffset;
+    final double forceLabelFontSize;
 
     @override
     void render(Window window, Painter painter) {
@@ -244,6 +250,77 @@ class BeamEditorView extends EditorView {
         painter.setPaint(color: editorElement.selected ? Colors.orange.shade700 : Colors.grey.shade900);
         for (final d in directions) {
             painter.drawLine(window, screenCenter + d * centerCrossLength, screenCenter - d * centerCrossLength);
+        }
+    }
+
+    void drawForceArrows(Window window, Painter painter) {
+        painter.setPaint(color: Colors.blue);
+
+        const double triangleStep = 10;
+        int totalTriangles = ((editorElement.start.position - editorElement.end.position) / triangleStep).toInt();
+        totalTriangles = totalTriangles < 1 ? 1 : totalTriangles; 
+
+        const lerpFactor = 0.1;
+        var aArrow = a;
+        var bArrow = b;
+
+        if (editorElement.force.dx > 0) {
+            final cStart = lerpOffset(editorElement.start.position, editorElement.end.position, lerpFactor);
+            for (
+                Offset cArrow = cStart;
+                (cArrow - editorElement.end.position).distance > 0.01;
+            ) {
+                painter.drawTriangle(
+                    window,
+                    window.worldToScreen(aArrow),
+                    window.worldToScreen(bArrow),
+                    window.worldToScreen(cArrow),
+                );
+
+                aArrow = lerpOffset(aArrow, c, lerpFactor);
+                bArrow = lerpOffset(bArrow, d, lerpFactor);
+                cArrow = lerpOffset(cArrow, editorElement.end.position, lerpFactor);
+            }
+        }
+        /*
+        if (editorElement.force.dx > 0) {
+            final cStart = lerpOffset(editorElement.start.position, editorElement.end.position, lerpFactor);
+            for (
+                Offset cArrow = cStart;
+                (cArrow - editorElement.end.position).distance > 0.01;
+            ) {
+                painter.drawTriangle(
+                    window,
+                    window.worldToScreen(aArrow),
+                    window.worldToScreen(bArrow),
+                    window.worldToScreen(cArrow),
+                );
+
+                aArrow = lerpOffset(aArrow, c, lerpFactor);
+                bArrow = lerpOffset(bArrow, d, lerpFactor);
+                cArrow = lerpOffset(cArrow, editorElement.end.position, lerpFactor);
+            }
+        }*/ else if (editorElement.force.dx < 0) {
+
+        }
+    }
+
+    @override
+    void renderUI(Window window, Painter painter) {
+        drawForceArrows(window, painter);
+        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
+            painter.drawText(
+                window: window,
+                text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: Color(0x00ffffff),
+                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
+                outline: true,
+                outlineSize: 1.25,
+                centerAlignX: true,
+                centerAlignY: true,
+            );
         }
     }
 
@@ -387,7 +464,7 @@ class Editor {
         this.nodes = const [],
         this.selectedElements = const [],
         this.beams = const [],
-        this.dragBox = infinityOffset,
+        this.dragBox = Offset.infinite,
         this.dragBoxRadius = 10,
     }) {
         nodes = [
@@ -423,6 +500,7 @@ class Editor {
                 end: nodes[5],
                 width: 1,
                 section: BeamSection.round,
+                force: Offset(22, 22),
             ),
         ];
         editorElements = List.from(nodes)..addAll(beams);
@@ -476,17 +554,15 @@ class Editor {
     }
 
     /// Rendering
-    void drawBeams(Window window, Painter painter) {
-        for (final c in beams) {
-            c.editorView.refreshCanvasData();
-            c.editorView.render(window, painter);
+    void drawEditorElements(Window window, Painter painter) {
+        for (final b in beams) {
+            b.editorView.refreshCanvasData();
+            b.editorView.render(window, painter);
         }
-    }
-
-    void drawNodes(Window window, Painter painter) {
         for (final n in nodes) {
+            n.editorView.refreshCanvasData();
             n.editorView.render(window, painter);
-        }   
+        }
     }
 
     void drawDragBox(Window window, Painter painter) {
@@ -518,12 +594,21 @@ class Editor {
         }
     }
 
+    void drawEditorElementsUI(Window window, Painter painter) {
+        for (final e in editorElements) {
+            e.editorView.renderUI(window, painter);
+        }
+    }
+
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
-        drawBeams(window, painter);
-        drawNodes(window, painter);
+        drawEditorElements(window, painter);
         drawDragBox(window, painter);
         drawBoxSelection(window, painter, input);
+    }
+
+    void renderUI(Window window, Painter painter, Input input) {
+        drawEditorElementsUI(window, painter);
     }
 }
 
@@ -700,8 +785,8 @@ class BoxSelection {
     BoxSelection(this.start, this.end);
     BoxSelection.fromStart(Offset start) : start = start, end = start;
     BoxSelection.infinity()
-        : start = infinityOffset,
-          end = infinityOffset;
+        : start = Offset.infinite,
+          end = Offset.infinite;
 
     Offset start;
     Offset end;

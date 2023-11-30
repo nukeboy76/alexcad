@@ -70,6 +70,7 @@ class _CADEditorState extends State<CADEditor> {
     void processAll() {
         editor.processInput(window, input);
         editor.render(window, painter, input);
+        editor.renderUI(window, painter, input);
     }
 
     void _handlePointerMove(PointerEvent event) {
