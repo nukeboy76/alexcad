@@ -5,7 +5,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_icons.dart';
+import 'cad_colors.dart';
+import 'cad_icons.dart';
 import 'input.dart';
 import 'inspector.dart';
 import 'painter.dart';
@@ -13,6 +14,17 @@ import 'types.dart';
 import 'utils/utils.dart';
 import 'window.dart';
 
+
+const List<Widget> selectionModeIcons = <Widget>[
+    Icon(
+       CadIcons.polygonEdges,
+       size: 32,
+    ),
+    Icon(
+       CadIcons.polygonVerticies,
+       size: 32,
+    ),
+];
 
 abstract class EditorView {
     EditorView({
@@ -109,7 +121,7 @@ class NodeEditorView extends EditorView {
     @override
     void render(Window window, Painter painter) {
         if (editorElement.fixator != NodeFixator.disabled) {
-            painter.setPaint(color: editorElement.selected ? Colors.orange.shade400 : Colors.grey.shade400);
+            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade400);
             painter.drawRect(
                 window,
                 Rect.fromCircle(
@@ -118,13 +130,12 @@ class NodeEditorView extends EditorView {
                 ),
             );
         }
-        painter.setPaint(color: editorElement.selected ? Colors.orange : Colors.grey);
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.3) : Colors.grey);
         painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
     }
 
     @override
     void renderUI(Window window, Painter painter) {
-
         if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
             painter.drawText(
                 window: window,
@@ -242,23 +253,23 @@ class BeamEditorView extends EditorView {
 
     @override
     void render(Window window, Painter painter) {
-        final color = editorElement.selected ? Colors.orange : Colors.grey.shade700;
+        final color = editorElement.selected ? cianColor.darker(0.3) : Colors.grey.shade700;
         painter.setPaint(color: color);
         painter.drawQuad(window, a, b, c, d);
 
         final screenCenter = window.worldToScreen(editorElement.center);
-        painter.setPaint(color: editorElement.selected ? Colors.orange.shade700 : Colors.grey.shade900);
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade900);
         for (final d in directions) {
             painter.drawLine(window, screenCenter + d * centerCrossLength, screenCenter - d * centerCrossLength);
         }
     }
 
     void drawForceArrows(Window window, Painter painter) {
-        painter.setPaint(color: Colors.blue);
+        painter.setPaint(color: cianColor.color);
 
-        const double triangleStep = 10;
-        int totalTriangles = ((editorElement.start.position - editorElement.end.position) / triangleStep).toInt();
-        totalTriangles = totalTriangles < 1 ? 1 : totalTriangles; 
+        //const double triangleStep = 10;
+        //int totalTriangles = ((editorElement.start.position - editorElement.end.position) / triangleStep).toInt();
+        //totalTriangles = totalTriangles < 1 ? 1 : totalTriangles; 
 
         const lerpFactor = 0.1;
         var aArrow = a;
@@ -423,8 +434,8 @@ class EditorDoneSelectionState extends EditorSelectionState {
     @override
     void processInput(Editor editor, Window window, Input input) {
         final mouseInDragBox = Rect.fromCircle(
-            center: editor.dragBox,
-            radius: editor.dragBoxRadius * (1 / window.zoom),
+            center: editor.dragBoxPosition,
+            radius: editor.dragBoxRadius,
         ).contains(input.mousePosWorld);
 
         if (input.isLMBDown && mouseInDragBox) {
@@ -450,10 +461,10 @@ class EditorDragSelectionState extends EditorSelectionState {
                 }
             }
             for (final n in nodes) {
-                n.position = n.position + (input.boxSelectionWorld.end - editor.dragBox);
+                n.position = n.position + (input.boxSelectionWorld.end - editor.dragBoxPosition);
             }
 
-            editor.dragBox = input.boxSelectionWorld.end;
+            editor.dragBoxPosition = input.boxSelectionWorld.end;
         }
     }
 }
@@ -464,7 +475,7 @@ class Editor {
         this.nodes = const [],
         this.selectedElements = const [],
         this.beams = const [],
-        this.dragBox = Offset.infinite,
+        this.dragBoxPosition = Offset.infinite,
         this.dragBoxRadius = 10,
     }) {
         nodes = [
@@ -514,14 +525,14 @@ class Editor {
     List<EditorElement> selectedElements;
 
 
-    Offset dragBox;
-    double dragBoxRadius;
+    Offset dragBoxPosition;
+    late double dragBoxRadius;
 
     Grid grid = Grid();
 
     late EditorSelectionState selectionState;
     late EditorBar bar;
-    Color boxSelectionColor = Color.fromRGBO(13, 88, 166, 192);
+    Color boxSelectionColor = cianColor.darker(0.25).withOpacity(0.2);
 
     void resetSelectionState() {
         selectionState = EditorProcessSelectionState(this);
@@ -531,18 +542,18 @@ class Editor {
         selectionState = state;
     }
 
-    /// Input
     void processInput(Window window, Input input) {
         selectionState.processInput(this, window, input);
     }
 
-    /// Input Grid
     void drawBoxSelection(Window window, Painter painter, Input input) {
+        const double selectionPointRadius = 7;
         final selection = input.boxSelectionWorld;
         if (input.isLMBDown && selection.start != selection.end) {
             painter.setPaint(color: boxSelectionColor, width: 1);
-            painter.drawCircle(window, window.worldToScreen(selection.start), 10);
-            painter.drawCircle(window, window.worldToScreen(selection.end), 10);
+            painter.drawCircle(window, window.worldToScreen(selection.start), selectionPointRadius);
+            painter.drawCircle(window, window.worldToScreen(selection.end), selectionPointRadius);
+
             painter.drawRect(
                 window,
                 Rect.fromPoints(
@@ -553,7 +564,6 @@ class Editor {
         }
     }
 
-    /// Rendering
     void drawEditorElements(Window window, Painter painter) {
         for (final b in beams) {
             b.editorView.refreshCanvasData();
@@ -572,24 +582,50 @@ class Editor {
             for (int i = 0; i < n; i++) {
                 selectedCentersSum += selectedElements[i].center; 
             }
-            dragBox = selectedCentersSum / n.toDouble();
-            painter.setPaint(color: Color.fromRGBO(0, 0, 255, 192), width: 1);
+            dragBoxPosition = selectedCentersSum / n.toDouble();
+            dragBoxRadius = 10 / window.zoom;
+
+            final dragBoxPositionScreen = window.worldToScreen(dragBoxPosition);
+            final lt = dragBoxPosition + Offset(-dragBoxRadius, dragBoxRadius);
+            final rt = dragBoxPosition + Offset(dragBoxRadius, dragBoxRadius);
+            final lb = dragBoxPosition + Offset(-dragBoxRadius, -dragBoxRadius);
+            final rb = dragBoxPosition + Offset(dragBoxRadius, -dragBoxRadius);
+
+            painter.setPaint(color: Colors.black.withOpacity(0.2), width: 1);
             painter.drawRect(
                 window,
-                Rect.fromCenter(
-                    center: window.worldToScreen(dragBox),
-                    width: dragBoxRadius,
-                    height: dragBoxRadius * 4,
-                ),
+                Rect.fromPoints(
+                    window.worldToScreen(lt),
+                    window.worldToScreen(rb),
+                )
             );
-            painter.setPaint(color: Color.fromRGBO(255, 0, 0, 192), width: 1);
-            painter.drawRect(
+
+            const double triangleHeight = 20;
+            painter.setPaint(color: pinkColor.withOpacity(0.66), width: 1);
+            painter.drawTriangle(
                 window,
-                Rect.fromCenter(
-                    center: window.worldToScreen(dragBox),
-                    width: dragBoxRadius * 4,
-                    height: dragBoxRadius,
-                ),
+                window.worldToScreen(lt),
+                window.worldToScreen(lb),
+                dragBoxPositionScreen - Offset(triangleHeight, 0),
+            );
+            painter.drawTriangle(
+                window,
+                window.worldToScreen(rt),
+                window.worldToScreen(rb),
+                dragBoxPositionScreen + Offset(triangleHeight, 0),
+            );
+            painter.setPaint(color: cianColor.withOpacity(0.66), width: 1);
+            painter.drawTriangle(
+                window,
+                window.worldToScreen(lt),
+                window.worldToScreen(rt),
+                dragBoxPositionScreen - Offset(0, triangleHeight),
+            );
+            painter.drawTriangle(
+                window,
+                window.worldToScreen(lb),
+                window.worldToScreen(rb),
+                dragBoxPositionScreen + Offset(0, triangleHeight),
             );
         }
     }
@@ -603,12 +639,9 @@ class Editor {
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
         drawEditorElements(window, painter);
-        drawDragBox(window, painter);
-        drawBoxSelection(window, painter, input);
-    }
-
-    void renderUI(Window window, Painter painter, Input input) {
         drawEditorElementsUI(window, painter);
+        drawBoxSelection(window, painter, input);
+        drawDragBox(window, painter);
     }
 }
 
@@ -657,14 +690,14 @@ class Grid {
             }
         }
 
-        painter.setPaint(color: Colors.blue.shade800, width: 3);
+        painter.setPaint(color: cianColor.darker(0.2), width: 3);
         painter.drawLine(
             window,
             Offset(window.pan.dx, 0),
             Offset(window.pan.dx, window.height),
         );
 
-        painter.setPaint(color: Colors.red, width: 3);
+        painter.setPaint(color: pinkColor.darker(0.2), width: 3);
         painter.drawLine(
             window,
             Offset(0, window.pan.dy),
@@ -689,7 +722,7 @@ class Grid {
                     text: text,
                     fontSize: 18,
                     textColor: clamped ? Colors.grey.shade600 : Colors.black,
-                    bgColor: clamped ? Color.fromRGBO(0, 0, 0, 0.15) : Color.fromRGBO(255, 255, 255, 0),
+                    bgColor: clamped ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0),
                     outline: !clamped,
                     textOffset: textOffset,
                     centerAlignX: true,
@@ -744,12 +777,12 @@ class _EditorBarState extends State<EditorBar> {
                             });
                         },
                         borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        selectedBorderColor: Colors.blue[700],
+                        selectedBorderColor: cianColor.darker(0.3),
                         selectedColor: Colors.white,
-                        disabledBorderColor: Color.fromRGBO(255, 255, 255, 1.0),
-                        disabledColor: Color.fromRGBO(255, 255, 255, 1.0),
-                        fillColor: Colors.blue[200],
-                        color: Colors.blue[400],
+                        disabledBorderColor: Colors.white,
+                        disabledColor: Colors.white,
+                        fillColor: cianColor.darker(0.2),
+                        color: cianColor.darker(0.2),
                         isSelected: widget.selectionMode,
                         children: selectionModeIcons,
                     ),

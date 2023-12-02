@@ -3,7 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_icons.dart';
+import 'cad_icons.dart';
+import 'cad_colors.dart';
 import 'editor.dart';
 import 'input.dart';
 import 'painter.dart';
@@ -43,15 +44,14 @@ class Inspector extends StatefulWidget {
         super.key,
         this.width = 400,
         this.height = 1080,
-        this.color = const Color.fromRGBO(73, 162, 255, 128), 
         this.title = "Inspector",
         this.child,
     });
 
+    final Color color = cianColor.lighter(0.9);
     final List<dynamic> selectedElements;
     final double width;
     final double height;
-    final Color color;
     final String title;
     final Widget? child;
 
@@ -73,7 +73,10 @@ class _InspectorState extends State<Inspector> {
             color: widget.color,
             child: ListView(
                 children: [
-                    Text("${widget.title}"),
+                    Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                    ),
                     selectedElementsLength != 1 ? Row() : widget.selectedElements[0].inspectorView.widget,
                 ],
             ),
@@ -117,6 +120,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                     title: "End node",
                     node: widget.beam.end,
                 ),
+                Text("Beam parameters"),
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
@@ -193,6 +197,10 @@ class _NodeWidgetState extends State<NodeWidget> {
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+                Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                ),
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
@@ -215,6 +223,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                     labelX: "Fx",
                     labelY: "Fy",
                 ),
+                Text("Node parameters"),
                 SingleValueWidget(
                     onChange: (value) {
                         setState(() {

@@ -50,6 +50,20 @@ Offset rotatePoint(Offset center, Offset point, double angle) {
     return Offset(point.dx * c - point.dy * s + center.dx, point.dx * s + point.dy * c + center.dy);
 }
 
+int clampInt(int value, int lower, int upper) {
+    return value.clamp(lower, upper).toInt();
+}
+
+double lerpInt(int a, int b, double t) {
+    final newA = a.toDouble();
+    final newB = b.toDouble();
+    return newA * (1.0 - t) + newB * t;
+}
+
+double lerpDoble(double a, double b, double t) {
+    return a * (1.0 - t) + b * t;
+}
+
 Offset lerpOffset(Offset a, Offset b, double t) {
     return Offset(a.dx * (1.0 - t) + b.dx * t, a.dy * (1.0 - t) + b.dy * t);
 }

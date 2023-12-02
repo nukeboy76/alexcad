@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 //import 'package:window_manager/window_manager.dart';
 
-import 'app_icons.dart';
+import 'cad_icons.dart';
 import 'editor.dart';
 import 'input.dart';
 import 'inspector.dart';
@@ -70,7 +70,6 @@ class _CADEditorState extends State<CADEditor> {
     void processAll() {
         editor.processInput(window, input);
         editor.render(window, painter, input);
-        editor.renderUI(window, painter, input);
     }
 
     void _handlePointerMove(PointerEvent event) {

@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_icons.dart';
 import 'editor.dart';
 import 'inspector.dart';
 import 'painter.dart';
