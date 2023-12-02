@@ -54,7 +54,7 @@ class _CADEditorState extends State<CADEditor> {
     Editor editor = Editor();
 
     Painter painter = Painter();
-    FocusNode _focus = FocusNode();
+    FocusNode _focus = new FocusNode();
 
     final double inspectorWidth = 400;
     final double barHeight = 60;
@@ -111,6 +111,7 @@ class _CADEditorState extends State<CADEditor> {
                     children: [
                         Container(
                             child: RawKeyboardListener(
+                                autofocus: true,
                                 focusNode: _focus,
                                 onKey: _handleKeyEvent,
                                 child: MouseRegion(

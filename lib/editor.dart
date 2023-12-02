@@ -26,6 +26,7 @@ const List<Widget> selectionModeIcons = <Widget>[
     ),
 ];
 
+
 abstract class EditorView {
     EditorView({
         this.editorElement,
@@ -376,6 +377,7 @@ class BeamEditorView extends EditorView {
 
 abstract class EditorSelectionState {
     void processInput(Editor editor, Window window, Input input) {}
+    void drawBoxSelection(Window window, Painter painter, Input input) {}
 }
 
 
@@ -383,6 +385,9 @@ class EditorInitialSelectionState extends EditorSelectionState {
     EditorInitialSelectionState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {}
+
+    @override
+    void drawBoxSelection(Window window, Painter painter, Input input) {}
 }
 
 
@@ -426,6 +431,25 @@ class EditorProcessSelectionState extends EditorSelectionState {
             }
         }
     }
+
+    @override
+    void drawBoxSelection(Window window, Painter painter, Input input) {
+        const double selectionPointRadius = 7;
+        final selection = input.boxSelectionWorld;
+        if (input.isLMBDown && selection.start != selection.end) {
+            painter.setPaint(color: cianColor.darker(0.25).withOpacity(0.2), width: 1);
+            painter.drawCircle(window, window.worldToScreen(selection.start), selectionPointRadius);
+            painter.drawCircle(window, window.worldToScreen(selection.end), selectionPointRadius);
+
+            painter.drawRect(
+                window,
+                Rect.fromPoints(
+                    window.worldToScreen(selection.start), 
+                    window.worldToScreen(selection.end),
+                )
+            );
+        }
+    }
 }
 
 
@@ -444,6 +468,9 @@ class EditorDoneSelectionState extends EditorSelectionState {
             editor.changeSelectionState(EditorProcessSelectionState(editor));
         }
     }
+
+    @override
+    void drawBoxSelection(Window window, Painter painter, Input input) {}
 }
 
 
@@ -467,6 +494,9 @@ class EditorDragSelectionState extends EditorSelectionState {
             editor.dragBoxPosition = input.boxSelectionWorld.end;
         }
     }
+
+    @override
+    void drawBoxSelection(Window window, Painter painter, Input input) {}
 }
 
 
@@ -532,7 +562,8 @@ class Editor {
 
     late EditorSelectionState selectionState;
     late EditorBar bar;
-    Color boxSelectionColor = cianColor.darker(0.25).withOpacity(0.2);
+
+    FocusNode focus = FocusNode();
 
     void resetSelectionState() {
         selectionState = EditorProcessSelectionState(this);
@@ -542,26 +573,33 @@ class Editor {
         selectionState = state;
     }
 
-    void processInput(Window window, Input input) {
-        selectionState.processInput(this, window, input);
+    void deleteSelectedElements(Input input) {
+        if (input.lastKeyboardEvent == LogicalKeyboardKey.delete) {
+            print(123);
+            for (final e in selectedElements) {
+                if (e is Node) {
+                    List<dynamic> beamsToRemove = [];
+                    for (final b in beams) {
+                        if (e == b.start || e == b.end) {beamsToRemove.add(b);}
+                    }
+                    for (final b in beams) {
+                        if (beamsToRemove.contains(b)) {beams.remove(b);}
+                    }
+                    nodes.remove(e);
+                } else if (e is Beam) {
+                    var startNodeToRemove = e.start;
+                    var endNodeToRemove = e.end;
+                    beams.remove(e);
+                    nodes.remove(startNodeToRemove);
+                    nodes.remove(endNodeToRemove);
+                }
+            }
+        }
     }
 
-    void drawBoxSelection(Window window, Painter painter, Input input) {
-        const double selectionPointRadius = 7;
-        final selection = input.boxSelectionWorld;
-        if (input.isLMBDown && selection.start != selection.end) {
-            painter.setPaint(color: boxSelectionColor, width: 1);
-            painter.drawCircle(window, window.worldToScreen(selection.start), selectionPointRadius);
-            painter.drawCircle(window, window.worldToScreen(selection.end), selectionPointRadius);
-
-            painter.drawRect(
-                window,
-                Rect.fromPoints(
-                    window.worldToScreen(selection.start), 
-                    window.worldToScreen(selection.end),
-                )
-            );
-        }
+    void processInput(Window window, Input input) {
+        deleteSelectedElements(input);
+        selectionState.processInput(this, window, input);
     }
 
     void drawEditorElements(Window window, Painter painter) {
@@ -639,8 +677,8 @@ class Editor {
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
         drawEditorElements(window, painter);
-        drawEditorElementsUI(window, painter);
-        drawBoxSelection(window, painter, input);
+        if (bar.elementsUIVisible) drawEditorElementsUI(window, painter);
+        selectionState.drawBoxSelection(window, painter, input);
         drawDragBox(window, painter);
     }
 }
@@ -743,14 +781,13 @@ class EditorBar extends StatefulWidget {
     EditorBar(Editor this.editor);
 
     Editor editor;
-    List<bool> selectionMode = [true, false];
-    static bool _showElementsData = false;
+    List<bool> _selectionMode = [true, false];
+    List<bool> _hideElementsUI = [true];
 
-    bool get isBeamSelectionMode => selectionMode[0];
-    bool get isNodeSelectionMode => selectionMode[1];
+    bool get isBeamSelectionMode => _selectionMode[0];
+    bool get isNodeSelectionMode => _selectionMode[1];
 
-    bool get isDataHide => _showElementsData;
-    void set isDataHide(bool value) => _showElementsData = value;
+    bool get elementsUIVisible => _hideElementsUI[0];
 
     void unselectAllElements() {
         editor.resetSelectionState();
@@ -771,8 +808,8 @@ class _EditorBarState extends State<EditorBar> {
                         onPressed: (int index) {
                             setState(() {
                                 widget.unselectAllElements();
-                                for (int i = 0; i < widget.selectionMode.length; i++) {
-                                    widget.selectionMode[i] = i == index;
+                                for (int i = 0; i < widget._selectionMode.length; i++) {
+                                    widget._selectionMode[i] = i == index;
                                 }
                             });
                         },
@@ -783,30 +820,26 @@ class _EditorBarState extends State<EditorBar> {
                         disabledColor: Colors.white,
                         fillColor: cianColor.darker(0.2),
                         color: cianColor.darker(0.2),
-                        isSelected: widget.selectionMode,
+                        isSelected: widget._selectionMode,
                         children: selectionModeIcons,
                     ),
-                    /*
+                    SizedBox(width: 24),
                     ToggleButtons(
-                        onPressed: (int index) {
+                        onPressed: (int _) {
                             setState(() {
-                                widget.unselectAllElements();
-                                for (int i = 0; i < widget.selectionMode.length; i++) {
-                                    widget.selectionMode[i] = i == index;
-                                }
+                                widget._hideElementsUI[0] = !widget._hideElementsUI[0];
                             });
                         },
                         borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        selectedBorderColor: Colors.blue[700],
+                        selectedBorderColor: cianColor.darker(0.3),
                         selectedColor: Colors.white,
-                        disabledBorderColor: Color.fromRGBO(255, 255, 255, 1.0),
-                        disabledColor: Color.fromRGBO(255, 255, 255, 1.0),
-                        fillColor: Colors.blue[200],
-                        color: Colors.blue[400],
-                        isSelected: widget.selectionMode,
-                        children: ,
+                        disabledBorderColor: Colors.white,
+                        disabledColor: Colors.white,
+                        fillColor: cianColor.darker(0.2),
+                        color: cianColor.darker(0.2),
+                        isSelected: widget._hideElementsUI,
+                        children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
                     ),
-                    */
                 ],
             ),
         );

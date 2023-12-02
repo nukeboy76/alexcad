@@ -26,7 +26,10 @@ class NodeInspectorView extends InspectorView {
 
     final element;
 
-    Widget get widget => NodeWidget(node: element);
+    Widget get widget => NodeWidget(
+        onChange: (value) {},
+        node: element,
+    );
 }
 
 
@@ -113,10 +116,20 @@ class _BeamWidgetState extends State<BeamWidget> {
             children: [
                 Text(widget.title),
                 NodeWidget(
+                    onChange: (value) {
+                        setState(() {
+                            widget.beam.start.fixator = value;
+                        });
+                    },
                     title: "Start node",
                     node: widget.beam.start,
                 ),
                 NodeWidget(
+                    onChange: (value) {
+                        setState(() {
+                            widget.beam.end.fixator = value;
+                        });
+                    },
                     title: "End node",
                     node: widget.beam.end,
                 ),
@@ -179,10 +192,12 @@ class _BeamWidgetState extends State<BeamWidget> {
 class NodeWidget extends StatefulWidget {
     NodeWidget({
         super.key,
+        required this.onChange,
         required this.node,
         this.title = "Node",
     });
 
+    final onChange;
     String title;
     Node node;
 
@@ -192,6 +207,8 @@ class NodeWidget extends StatefulWidget {
 
 
 class _NodeWidgetState extends State<NodeWidget> {
+    final TextEditingController fixatorController = TextEditingController();
+
     @override
     Widget build(BuildContext context) {
         return Column(
@@ -238,13 +255,26 @@ class _NodeWidgetState extends State<NodeWidget> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                         Flexible(
-                            child: Text(
-                                "Node fixator",
-                            ),
+                            child: Text("Node fixator"),
                         ),
                         Flexible(
-                            child: Text(
-                                widget.node.fixator.toString(),
+                            child: DropdownMenu<NodeFixator>(
+                                initialSelection: widget.node.fixator,
+                                controller: fixatorController,
+                                requestFocusOnTap: false,
+                                onSelected: (value) => widget.onChange(value),
+                                dropdownMenuEntries: NodeFixator.values
+                                        .map<DropdownMenuEntry<NodeFixator>>(
+                                                (NodeFixator nodeFixator) {
+                                    return DropdownMenuEntry<NodeFixator>(
+                                        value: nodeFixator,
+                                        label: nodeFixator.name,
+                                        enabled: true,
+                                        style: MenuItemButton.styleFrom(
+                                            foregroundColor: cianColor.darker(0.5),
+                                        ),
+                                    );
+                                }).toList(),
                             ),
                         ),
                     ],

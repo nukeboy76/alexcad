@@ -41,6 +41,8 @@ class Input {
     late PointerEvent lastPointerEvent;
     BoxSelection boxSelectionWorld = BoxSelection.infinity();
 
+    late dynamic lastKeyboardEvent;
+
     void handlePointerMove(Window window, PointerEvent event) {
         final curMousePosWorld = window.screenToWorld(event.position);
         mouseDelta = event.delta;
@@ -119,6 +121,8 @@ class Input {
     }
 
     void handleKeyEvent(RawKeyEvent event) {
+        print(event.logicalKey);
+        lastKeyboardEvent = event.logicalKey;
         /*
         if (event.logicalKey == LogicalKeyboardKey.keyQ) {
             //
