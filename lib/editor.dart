@@ -345,7 +345,8 @@ class BeamEditorView extends EditorView {
 
     @override
     bool? boxSelect(BoxSelection selection) {
-        editorElement.selected = isPointInRect(editorElement.center, selection.start, selection.end);
+        editorElement.selected = isPointInRect(editorElement.start.center, selection.start, selection.end) &&
+                                 isPointInRect(editorElement.end.center, selection.start, selection.end);
         return editorElement.selected;
     }
 
@@ -613,7 +614,7 @@ class Editor {
         }
     }
 
-    void drawDragBox(Window window, Painter painter) {
+    void drawDragBox(Window window, Painter painter, Input input) {
         Offset selectedCentersSum = Offset(0, 0);
         final int n = selectedElements.length;
         if (n > 0) {
@@ -638,8 +639,15 @@ class Editor {
                 )
             );
 
+            final mouseInDragBox = Rect.fromCircle(
+                center: dragBoxPosition,
+                radius: dragBoxRadius,
+            ).contains(input.mousePosWorld);
             const double triangleHeight = 20;
-            painter.setPaint(color: pinkColor.withOpacity(0.66), width: 1);
+            const double triangleOpacity = 0.80;
+            final double triangleLight = (mouseInDragBox) ? 0.33 : 0;
+
+            painter.setPaint(color: pinkColor.lighter(triangleLight / 1.5).withOpacity(triangleOpacity), width: 1);
             painter.drawTriangle(
                 window,
                 window.worldToScreen(lt),
@@ -652,7 +660,7 @@ class Editor {
                 window.worldToScreen(rb),
                 dragBoxPositionScreen + Offset(triangleHeight, 0),
             );
-            painter.setPaint(color: cianColor.withOpacity(0.66), width: 1);
+            painter.setPaint(color: cianColor.lighter(triangleLight).withOpacity(triangleOpacity), width: 1);
             painter.drawTriangle(
                 window,
                 window.worldToScreen(lt),
@@ -679,7 +687,7 @@ class Editor {
         drawEditorElements(window, painter);
         if (bar.elementsUIVisible) drawEditorElementsUI(window, painter);
         selectionState.drawBoxSelection(window, painter, input);
-        drawDragBox(window, painter);
+        drawDragBox(window, painter, input);
     }
 }
 

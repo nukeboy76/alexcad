@@ -41,7 +41,7 @@ class Input {
     late PointerEvent lastPointerEvent;
     BoxSelection boxSelectionWorld = BoxSelection.infinity();
 
-    late dynamic lastKeyboardEvent;
+    var lastKeyboardEvent = LogicalKeyboardKey(0x00000000000);
 
     void handlePointerMove(Window window, PointerEvent event) {
         final curMousePosWorld = window.screenToWorld(event.position);
