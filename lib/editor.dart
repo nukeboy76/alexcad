@@ -62,13 +62,13 @@ abstract class EditorElement {
 
 
 class Node extends EditorElement {
-    Node(Offset position, {
+    Node(double x, double y, {
         this.selected = false,
         this.force = const Offset(0, 0),
         this.torqueForce = 0,
         this.fixator = NodeFixator.disabled,
     }) {
-        this._position = position;
+        this._position = Offset(x, y);
         this.editorView = NodeEditorView(this);
         this.inspectorView = NodeInspectorView(this);
     }
@@ -398,7 +398,7 @@ class EditorInitialSelectionState extends EditorSelectionState {
 
 class EditorProcessSelectionState extends EditorSelectionState {
     EditorProcessSelectionState(Editor editor) {
-        for(final e in editor.editorElements) {
+        for(final e in editor.elements) {
             e.selected = false;
         }
     }
@@ -411,9 +411,9 @@ class EditorProcessSelectionState extends EditorSelectionState {
         editor.selectedElements = [];
         final start = input.boxSelectionWorld.start;
         final end = input.boxSelectionWorld.end;
+        final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
 
         if (start != end) {
-            final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list) {
                 final select = c.editorView.boxSelect(input.boxSelectionWorld);
                 if (select != null) {
@@ -423,7 +423,6 @@ class EditorProcessSelectionState extends EditorSelectionState {
                 }
             }   
         } else {
-            final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
             for (final c in list.reversed.toList()) {
                 final click = c.editorView.click(window, input.lMBWorldClick);
                 if (click != null && click) {
@@ -507,24 +506,20 @@ class EditorDragSelectionState extends EditorSelectionState {
 
 class Editor {
     Editor({
-        this.nodes = const [],
         this.selectedElements = const [],
-        this.beams = const [],
         this.dragBoxPosition = Offset.infinite,
         this.dragBoxRadius = 10,
-        this.inspectorWidth = 400,
-        this.inspectorHeight = 1920,
     }) {
-        nodes = [
-            Node(Offset(0, 0), fixator: NodeFixator.hvt),
-            Node(Offset(1, 0)),
-            Node(Offset(5, 0), fixator: NodeFixator.hvt),
-            Node(Offset(9, 10)),
-            Node(Offset(-5, 5)),
-            Node(Offset(-9, 0)),
+        var nodes = [
+            Node(0, 0, fixator: NodeFixator.hvt),
+            Node(1, 0),
+            Node(5, 0, fixator: NodeFixator.hvt),
+            Node(9, 10),
+            Node(-5, 5),
+            Node(-9, 0),
         ];
-        nodes.add(Node(Offset(7, 7)));
-        beams = [
+        nodes.add(Node(7, 7));
+        var beams = [
             Beam(
                 start: nodes[0],
                 end: nodes[1],
@@ -551,22 +546,45 @@ class Editor {
                 force: Offset(22, 22),
             ),
         ];
-        editorElements = List.from(nodes)..addAll(beams);
+        elements = List.from(beams)..addAll(nodes);
         bar = EditorBar(this);
-        operationsBar = EditorOperationsBar(this);
         selectionState = EditorProcessSelectionState(this);
-        inspector = Inspector(
-            editorElements,
-            width: inspectorWidth,
-            height: inspectorHeight,
-        );
     }
 
-    List<Node> nodes;
-    List<Beam> beams;
-    late List<EditorElement> editorElements;
+    late List<EditorElement> elements;
     List<EditorElement> selectedElements;
 
+    List<Node> get nodes {
+        List<Node> list = [];
+        for (final e in elements) {
+            if (e is Node) list.add(e);
+        }
+        return list;
+    }
+
+    List<Beam> get beams {
+        List<Beam> list = [];
+        for (final e in elements) {
+            if (e is Beam) list.add(e);
+        }
+        return list;
+    }
+
+    List<Node> get selectedNodes {
+        List<Node> list = [];
+        for (final e in elements) {
+            if (e is Node && e.selected) list.add(e);
+        }
+        return list;
+    }
+
+    List<Beam> get selectedBeams {
+        List<Beam> list = [];
+        for (final e in elements) {
+            if (e is Beam && e.selected) list.add(e);
+        }
+        return list;
+    }
 
     Offset dragBoxPosition;
     late double dragBoxRadius;
@@ -576,11 +594,6 @@ class Editor {
     late EditorSelectionState selectionState;
 
     late EditorBar bar;
-    late EditorOperationsBar operationsBar;
-    late Inspector inspector;
-
-    double inspectorWidth;
-    double inspectorHeight;
 
     FocusNode focus = FocusNode();
 
@@ -600,6 +613,33 @@ class Editor {
         }
     }
 
+    void makeBeamsBetweenSelectedNodes() {
+        final l = selectedNodes.length;
+        for (int i = 0; i < l; i++) {
+            for (int j = i; j < l; j++) {
+                try {
+                    elements.add(
+                        Beam(
+                            start: selectedNodes[i % l],
+                            end: selectedNodes[j % l],
+                            width: 1,
+                            section: BeamSection.round,
+                        ),
+                    );
+                }
+                catch (identifier) {}
+            }
+        }
+        resetSelectionState();
+    }
+
+    void addNodeInCenter(Offset pan) {
+        elements.add(
+            Node(pan.dx, pan.dy)
+        );
+        print("added node in ${pan}");
+    }
+
     void deleteSelectedElements() {
         List<Node> nodesToRemove = [];
         List<Beam> beamsToRemove = [];
@@ -616,11 +656,11 @@ class Editor {
 
         for (final b in beamsToRemove) {
             if (beamsToRemove.contains(b)) beams.remove(b);
-            if (beamsToRemove.contains(b)) editorElements.remove(b);
+            if (beamsToRemove.contains(b)) elements.remove(b);
         }
         for (final n in nodesToRemove) {
             if (nodesToRemove.contains(n)) nodes.remove(n);
-            if (nodesToRemove.contains(n)) editorElements.remove(n);
+            if (nodesToRemove.contains(n)) elements.remove(n);
         }
         resetSelectionState();
     }
@@ -630,17 +670,10 @@ class Editor {
         selectionState.processInput(this, window, input);
     }
 
-    void drawBeams(Window window, Painter painter) {
-        for (final b in beams) {
-            b.editorView.refreshCanvasData();
-            b.editorView.render(window, painter);
-        }
-    }
-
-    void drawNodes(Window window, Painter painter) {
-        for (final n in nodes) {
-            n.editorView.refreshCanvasData();
-            n.editorView.render(window, painter);
+    void drawEditorElements(Window window, Painter painter) {
+        for (final e in elements) {
+            e.editorView.refreshCanvasData();
+            e.editorView.render(window, painter);
         }
     }
 
@@ -707,16 +740,15 @@ class Editor {
     }
 
     void drawEditorElementsUI(Window window, Painter painter) {
-        for (final e in editorElements) {
+        for (final e in elements) {
             e.editorView.renderUI(window, painter);
         }
     }
 
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
-        drawBeams(window, painter);
+        drawEditorElements(window, painter);
         if (bar.elementsUIVisible) drawEditorElementsUI(window, painter);
-        drawNodes(window, painter);
         selectionState.drawBoxSelection(window, painter, input);
         drawDragBox(window, painter, input);
     }
@@ -917,9 +949,10 @@ class _EditorBarState extends State<EditorBar> {
 
 
 class EditorOperationsBar extends StatefulWidget {
-    EditorOperationsBar(this.editor);
+    EditorOperationsBar(this.editor, this.window);
 
     Editor editor;
+    Window window;
 
     @override
     State<EditorOperationsBar> createState() => _EditorOperationsBarState();
@@ -929,12 +962,6 @@ class EditorOperationsBar extends StatefulWidget {
 class _EditorOperationsBarState extends State<EditorOperationsBar> {
     bool _visible = false;
     bool _changed = true;
-
-    @override
-    void initState() {
-        super.initState();
-        
-    }
 
     @override
     Widget build(BuildContext context) {
@@ -975,6 +1002,44 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                     minWidth: 40,
                                     onPressed: () {
                                         setState(() {
+                                            widget.editor.addNodeInCenter(widget.window.panWorld);
+                                            _visible = false;
+                                            _changed = true;
+                                        });
+                                    },
+                                    color: cianColor.darker(0.2),
+                                    textColor: Colors.white,
+                                    child: const Icon(
+                                       CadIcons.addPlus,
+                                       size: 32,
+                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                ),
+                                SizedBox(width: 20),
+                                widget.editor.bar.isNodeSelectionMode ? MaterialButton(
+                                    height: 55,
+                                    minWidth: 40,
+                                    onPressed: () {
+                                        setState(() {
+                                            widget.editor.makeBeamsBetweenSelectedNodes();
+                                            _visible = false;
+                                            _changed = true;
+                                        });
+                                    },
+                                    color: cianColor.darker(0.2),
+                                    textColor: Colors.white,
+                                    child: const Icon(
+                                       CadIcons.cheese,
+                                       size: 32,
+                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                ) : SizedBox.shrink(),
+                                widget.editor.bar.isNodeSelectionMode ? SizedBox(width: 20) : SizedBox.shrink(),
+                                MaterialButton(
+                                    height: 55,
+                                    minWidth: 40,
+                                    onPressed: () {
+                                        setState(() {
                                             widget.editor.deleteSelectedElements();
                                             _visible = false;
                                             _changed = true;
@@ -994,24 +1059,5 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                 ],
             ),
         );
-    }
-}
-
-class BoxSelection {
-    BoxSelection(this.start, this.end);
-    BoxSelection.fromStart(Offset start) : start = start, end = start;
-    BoxSelection.infinity()
-        : start = Offset.infinite,
-          end = Offset.infinite;
-
-    Offset start;
-    Offset end;
-
-    BoxSelection toWorld(Window window, Offset worldPoint) =>
-        BoxSelection(window.screenToWorld(start), window.screenToWorld(end));
-
-    @override
-    String toString() {
-        return "BoxSelection($start, $end)";
     }
 }

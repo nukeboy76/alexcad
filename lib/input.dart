@@ -128,3 +128,23 @@ class Input {
         keyboardEventBuffer.add(event.logicalKey);
     }
 }
+
+
+class BoxSelection {
+    BoxSelection(this.start, this.end);
+    BoxSelection.fromStart(Offset start) : start = start, end = start;
+    BoxSelection.infinity()
+        : start = Offset.infinite,
+          end = Offset.infinite;
+
+    Offset start;
+    Offset end;
+
+    BoxSelection toWorld(Window window, Offset worldPoint) =>
+        BoxSelection(window.screenToWorld(start), window.screenToWorld(end));
+
+    @override
+    String toString() {
+        return "BoxSelection($start, $end)";
+    }
+}

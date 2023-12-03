@@ -134,7 +134,7 @@ class _CADEditorState extends State<CADEditor> {
 
     @override
     Widget build(BuildContext context) {
-        _pickFiles.call();
+        //_pickFiles.call();
         return Row( 
             children: [
                 Column(
@@ -181,7 +181,7 @@ class _CADEditorState extends State<CADEditor> {
                                 Container(
                                     width: MediaQuery.of(context).size.width - inspectorWidth,
                                     height: barHeight,
-                                    child: EditorOperationsBar(editor),
+                                    child: EditorOperationsBar(editor, window),
                                 ),
                             ],
                         ),

@@ -16,7 +16,7 @@ class Window {
 
     double zoom;
     Offset pan;
-    
+
     final double zoomMin;
     final double zoomMax;
 
@@ -25,6 +25,7 @@ class Window {
     double get aspectRatio => width / height;
     Offset get size => Offset(width, height);
     Offset get center => size / 2;
+    Offset get panWorld => screenToWorld(center);
 
     void init(Canvas canvas, Size size) {
         this.canvas = canvas;

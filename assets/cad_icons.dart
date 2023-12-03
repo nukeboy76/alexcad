@@ -7,9 +7,9 @@
 ///
 /// flutter:
 ///   fonts:
-///    - family:  CadIcons
+///    - family:  Cad
 ///      fonts:
-///       - asset: fonts/CadIcons.ttf
+///       - asset: fonts/Cad.ttf
 ///
 /// 
 /// * Elusive, Copyright (C) 2013 by Aristeides Stathopoulos
@@ -39,34 +39,34 @@
 ///
 import 'package:flutter/widgets.dart';
 
-class CadIcons {
-  CadIcons._();
+class Cad {
+  Cad._();
 
-  static const _kFontFam = 'CadIcons';
+  static const _kFontFam = 'Cad';
   static const String? _kFontPkg = null;
 
   static const IconData eye = IconData(0xe800, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData eyeOff = IconData(0xe801, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData addPlus = IconData(0xe802, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData eye_off = IconData(0xe801, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData add_plus = IconData(0xe802, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData combine = IconData(0xe803, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData delete = IconData(0xe804, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData hide = IconData(0xe806, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData polygonEdges = IconData(0xe807, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData polygonVerticies = IconData(0xe808, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData snapToGrid = IconData(0xe809, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData polygon_edges = IconData(0xe807, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData polygon_verticies = IconData(0xe808, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData snap_to_grid = IconData(0xe809, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData uncombine = IconData(0xe80a, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData controlPointDuplicate = IconData(0xe80b, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData control_point_duplicate = IconData(0xe80b, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData floppy = IconData(0xe80c, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData link = IconData(0xe80d, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData doc = IconData(0xe80e, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData connection = IconData(0xe80f, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData cheese = IconData(0xe961, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData docText = IconData(0xf0f6, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData docInv = IconData(0xf15b, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData docTextInv = IconData(0xf15c, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData doc_text = IconData(0xf0f6, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData doc_inv = IconData(0xf15b, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData doc_text_inv = IconData(0xf15c, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData dropbox = IconData(0xf16b, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData calculator = IconData(0xf1ec, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData box = IconData(0xf466, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   static const IconData boxes = IconData(0xf468, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  static const IconData boxOpen = IconData(0xf49e, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData box_open = IconData(0xf49e, fontFamily: _kFontFam, fontPackage: _kFontPkg);
 }
