@@ -23,6 +23,7 @@ class Input {
         this.rMBUp = Offset.infinite,
         this.isLMBDown = false,
         this.isRMBDown = false,
+        this.barHeight = 60,
     });
 
     final double _mouseSensitivity = 0.001;
@@ -41,10 +42,12 @@ class Input {
     late PointerEvent lastPointerEvent;
     BoxSelection boxSelectionWorld = BoxSelection.infinity();
 
-    var lastKeyboardEvent = LogicalKeyboardKey(0x00000000000);
+    double barHeight;
+
+    List<LogicalKeyboardKey> keyboardEventBuffer = [];
 
     void handlePointerMove(Window window, PointerEvent event) {
-        final curMousePosWorld = window.screenToWorld(event.position);
+        final curMousePosWorld = window.screenToWorld(event.position - Offset(0, barHeight));
         mouseDelta = event.delta;
         mouseWorldDelta = mousePosWorld - curMousePosWorld;
         mousePosWorld = curMousePosWorld;
@@ -68,8 +71,8 @@ class Input {
     void handlePointerUp(Window window, PointerEvent event) {
         isLMBDown = false;
         isRMBDown = false;
-        lMBUp = event.position;
-        rMBUp = event.position;
+        lMBUp = event.position - Offset(0, barHeight);;
+        rMBUp = event.position - Offset(0, barHeight);;
 
         if (lMBUp == lMBDown) {
             lMBWorldClick = window.screenToWorld(lMBDown);
@@ -98,11 +101,11 @@ class Input {
 
     void handlePointerDown(Window window, PointerEvent event) {
         if (event.buttons == 1) {
-            lMBDown = event.position;
+            lMBDown = event.position - Offset(0, barHeight);
             boxSelectionWorld = BoxSelection.fromStart(window.screenToWorld(lMBDown));
             isLMBDown = true;
         } else if ([2, 4].contains(event.buttons)) {
-            rMBDown = event.position;
+            rMBDown = event.position - Offset(0, barHeight);
             boxSelectionWorld = BoxSelection.fromStart(window.screenToWorld(rMBDown));
             isRMBDown = true;
         }
@@ -121,18 +124,7 @@ class Input {
     }
 
     void handleKeyEvent(RawKeyEvent event) {
-        print(event.logicalKey);
-        lastKeyboardEvent = event.logicalKey;
-        /*
-        if (event.logicalKey == LogicalKeyboardKey.keyQ) {
-            //
-        } else {
-            if (kReleaseMode) {
-                //
-            } else {
-                //
-            }
-        }
-        */
+        if (keyboardEventBuffer.length > 8) keyboardEventBuffer..removeAt(0);
+        keyboardEventBuffer.add(event.logicalKey);
     }
 }

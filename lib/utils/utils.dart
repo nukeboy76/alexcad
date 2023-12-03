@@ -2,6 +2,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+void rebuildAllChildren(BuildContext context) {
+    void rebuild(Element el) {
+        el.markNeedsBuild();
+        el.visitChildren(rebuild);
+    }
+    (context as Element).visitChildren(rebuild);
+}
 
 final List<Offset> directions = [
     Offset(1, 0),

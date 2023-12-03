@@ -51,7 +51,7 @@ class Inspector extends StatefulWidget {
         this.child,
     });
 
-    final Color color = cianColor.lighter(0.9);
+    final Color color = amberColor.lighter(0.8);
     final List<dynamic> selectedElements;
     final double width;
     final double height;

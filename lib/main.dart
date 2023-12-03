@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 //import 'package:window_manager/window_manager.dart';
 
 import 'cad_icons.dart';
@@ -13,9 +15,10 @@ import 'window.dart';
 
 
 void main() async{
-    //WidgetsFlutterBinding.ensureInitialized();
+    WidgetsFlutterBinding.ensureInitialized();
     //await windowManager.ensureInitialized();
     //WindowManager.instance.setMinimumSize(const Size(600, 400));
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.leanBack);
     runApp(const MyApp());
 }
 
@@ -48,6 +51,10 @@ class CADEditor extends StatefulWidget {
 
 
 class _CADEditorState extends State<CADEditor> {
+    _CADEditorState() {
+        input = Input(barHeight: barHeight);
+    }
+
     Window window = Window();
 
     Input input = Input();
@@ -56,8 +63,8 @@ class _CADEditorState extends State<CADEditor> {
     Painter painter = Painter();
     FocusNode _focus = new FocusNode();
 
-    final double inspectorWidth = 400;
-    final double barHeight = 60;
+    double get inspectorWidth => 300;
+    double get barHeight => 60;
 
     void init(Canvas canvas, Size size) {
         this.window.init(canvas, size);
@@ -104,54 +111,86 @@ class _CADEditorState extends State<CADEditor> {
 
 
     @override
+    void initState() {
+       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.bottom]);
+       super.initState();
+    } 
+
+    void _pickFiles() async {
+        FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+        if (result != null) {
+          PlatformFile file = result.files.first;
+
+          print(file.name);
+          print(file.bytes);
+          print(file.size);
+          print(file.extension);
+          print(file.path);
+        } else {
+          // User canceled the picker
+        }
+    }
+
+    @override
     Widget build(BuildContext context) {
+        _pickFiles.call();
         return Row( 
             children: [
-                Stack(
+                Column(
                     children: [
                         Container(
-                            child: RawKeyboardListener(
-                                autofocus: true,
-                                focusNode: _focus,
-                                onKey: _handleKeyEvent,
-                                child: MouseRegion(
-                                    onHover: _handlePointerMove,
-                                    child: Listener(
-                                        onPointerUp: _handlePointerUp,
-                                        onPointerDown: _handlePointerDown,
-                                        onPointerMove: _handlePointerMove,
-                                        onPointerSignal: (pointerSignal) { 
-                                            if(pointerSignal is PointerScrollEvent) {
-                                                    _handlePointerScroll(pointerSignal);
-                                            }
-                                        },
-                                        child: Container(
-                                            width: MediaQuery.of(context).size.width - inspectorWidth,
-                                            height: MediaQuery.of(context).size.height,
-                                            color: Colors.white,
-                                            child: CustomPaint(
-                                                //size: Size.infinite,
-                                                painter: CADEditorRenderer(
-                                                    cad: this
+                            width: MediaQuery.of(context).size.width - inspectorWidth,
+                            height: barHeight,
+                            child: editor.bar,
+                        ),
+                        Stack(
+                            children: [
+                                Container(
+                                    height: MediaQuery.of(context).size.height - barHeight,
+                                    child: RawKeyboardListener(
+                                        autofocus: true,
+                                        focusNode: _focus,
+                                        onKey: _handleKeyEvent,
+                                        child: MouseRegion(
+                                            onHover: _handlePointerMove,
+                                            child: Listener(
+                                                onPointerUp: _handlePointerUp,
+                                                onPointerDown: _handlePointerDown,
+                                                onPointerMove: _handlePointerMove,
+                                                onPointerSignal: (pointerSignal) { 
+                                                    if(pointerSignal is PointerScrollEvent) {
+                                                            _handlePointerScroll(pointerSignal);
+                                                    }
+                                                },
+                                                child: Container(
+                                                    width: MediaQuery.of(context).size.width - inspectorWidth,
+                                                    height: MediaQuery.of(context).size.height,
+                                                    color: Colors.white,
+                                                    child: CustomPaint(
+                                                        //size: Size.infinite,
+                                                        painter: CADEditorRenderer(
+                                                            cad: this
+                                                        ),
+                                                    ),
                                                 ),
                                             ),
                                         ),
                                     ),
+                                ),                                        
+                                Container(
+                                    width: MediaQuery.of(context).size.width - inspectorWidth,
+                                    height: barHeight,
+                                    child: EditorOperationsBar(editor),
                                 ),
-                            ),
+                            ],
                         ),
-                        Container(
-                            height: barHeight,
-                            alignment: Alignment.topLeft,
-                            padding: const EdgeInsets.all(5.0),
-                            child: editor.bar,
-                        ),
-                    ]
+                    ],
                 ),
                 SingleChildScrollView(
                     child: Inspector(
                         editor.selectedElements,
-                        //width: inspectorWidth,
+                        width: inspectorWidth,
                         height: MediaQuery.of(context).size.height,
                     ),
                 ),

@@ -186,8 +186,8 @@ class Beam extends EditorElement {
         this.section = BeamSection.rect,
         this.selected = false,
     }) : assert(start != end) {
-        this.editorView = BeamEditorView(this);
         this.inspectorView = BeamInspectorView(this);
+        this.editorView = BeamEditorView(this);
     }
 
     Node start;
@@ -257,12 +257,6 @@ class BeamEditorView extends EditorView {
         final color = editorElement.selected ? cianColor.darker(0.3) : Colors.grey.shade700;
         painter.setPaint(color: color);
         painter.drawQuad(window, a, b, c, d);
-
-        final screenCenter = window.worldToScreen(editorElement.center);
-        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade900);
-        for (final d in directions) {
-            painter.drawLine(window, screenCenter + d * centerCrossLength, screenCenter - d * centerCrossLength);
-        }
     }
 
     void drawForceArrows(Window window, Painter painter) {
@@ -317,6 +311,14 @@ class BeamEditorView extends EditorView {
         }
     }
 
+    void drawBeamCenter(Window window, Painter painter) {
+        final beamCenterOnScreen = window.worldToScreen(editorElement.center);
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade900);
+        for (final d in directions) {
+            painter.drawLine(window, beamCenterOnScreen + d * centerCrossLength, beamCenterOnScreen - d * centerCrossLength);
+        }
+    }
+
     @override
     void renderUI(Window window, Painter painter) {
         drawForceArrows(window, painter);
@@ -334,6 +336,8 @@ class BeamEditorView extends EditorView {
                 centerAlignY: true,
             );
         }
+
+        drawBeamCenter(window, painter);
     }
 
     @override
@@ -508,6 +512,8 @@ class Editor {
         this.beams = const [],
         this.dragBoxPosition = Offset.infinite,
         this.dragBoxRadius = 10,
+        this.inspectorWidth = 400,
+        this.inspectorHeight = 1920,
     }) {
         nodes = [
             Node(Offset(0, 0), fixator: NodeFixator.hvt),
@@ -547,7 +553,13 @@ class Editor {
         ];
         editorElements = List.from(nodes)..addAll(beams);
         bar = EditorBar(this);
+        operationsBar = EditorOperationsBar(this);
         selectionState = EditorProcessSelectionState(this);
+        inspector = Inspector(
+            editorElements,
+            width: inspectorWidth,
+            height: inspectorHeight,
+        );
     }
 
     List<Node> nodes;
@@ -562,7 +574,13 @@ class Editor {
     Grid grid = Grid();
 
     late EditorSelectionState selectionState;
+
     late EditorBar bar;
+    late EditorOperationsBar operationsBar;
+    late Inspector inspector;
+
+    double inspectorWidth;
+    double inspectorHeight;
 
     FocusNode focus = FocusNode();
 
@@ -574,40 +592,52 @@ class Editor {
         selectionState = state;
     }
 
-    void deleteSelectedElements(Input input) {
-        if (input.lastKeyboardEvent == LogicalKeyboardKey.delete) {
-            print(123);
-            for (final e in selectedElements) {
-                if (e is Node) {
-                    List<dynamic> beamsToRemove = [];
-                    for (final b in beams) {
-                        if (e == b.start || e == b.end) {beamsToRemove.add(b);}
-                    }
-                    for (final b in beams) {
-                        if (beamsToRemove.contains(b)) {beams.remove(b);}
-                    }
-                    nodes.remove(e);
-                } else if (e is Beam) {
-                    var startNodeToRemove = e.start;
-                    var endNodeToRemove = e.end;
-                    beams.remove(e);
-                    nodes.remove(startNodeToRemove);
-                    nodes.remove(endNodeToRemove);
-                }
-            }
+    void handleKeyboard(Input input) {
+        if (input.keyboardEventBuffer.isEmpty) return;
+        if (input.keyboardEventBuffer.last == LogicalKeyboardKey.delete) {
+            input.keyboardEventBuffer.removeLast();
+            deleteSelectedElements();
         }
     }
 
+    void deleteSelectedElements() {
+        List<Node> nodesToRemove = [];
+        List<Beam> beamsToRemove = [];
+        for (final e in selectedElements) {
+            if (e is Node) {
+                for (final b in beams) {
+                    if (e == b.start || e == b.end) {beamsToRemove.add(b);}
+                }
+                nodesToRemove.add(e);
+            } else if (e is Beam) {
+                beamsToRemove.add(e);
+            }
+        }
+
+        for (final b in beamsToRemove) {
+            if (beamsToRemove.contains(b)) beams.remove(b);
+            if (beamsToRemove.contains(b)) editorElements.remove(b);
+        }
+        for (final n in nodesToRemove) {
+            if (nodesToRemove.contains(n)) nodes.remove(n);
+            if (nodesToRemove.contains(n)) editorElements.remove(n);
+        }
+        resetSelectionState();
+    }
+
     void processInput(Window window, Input input) {
-        deleteSelectedElements(input);
+        handleKeyboard(input);
         selectionState.processInput(this, window, input);
     }
 
-    void drawEditorElements(Window window, Painter painter) {
+    void drawBeams(Window window, Painter painter) {
         for (final b in beams) {
             b.editorView.refreshCanvasData();
             b.editorView.render(window, painter);
         }
+    }
+
+    void drawNodes(Window window, Painter painter) {
         for (final n in nodes) {
             n.editorView.refreshCanvasData();
             n.editorView.render(window, painter);
@@ -684,8 +714,9 @@ class Editor {
 
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
-        drawEditorElements(window, painter);
+        drawBeams(window, painter);
         if (bar.elementsUIVisible) drawEditorElementsUI(window, painter);
+        drawNodes(window, painter);
         selectionState.drawBoxSelection(window, painter, input);
         drawDragBox(window, painter, input);
     }
@@ -786,7 +817,7 @@ class Grid {
 
 
 class EditorBar extends StatefulWidget {
-    EditorBar(Editor this.editor);
+    EditorBar(this.editor);
 
     Editor editor;
     List<bool> _selectionMode = [true, false];
@@ -810,43 +841,73 @@ class _EditorBarState extends State<EditorBar> {
     @override
     Widget build(BuildContext context) {
         return Container(
+            color: amberColor.lighter(0.8),
+            padding: const EdgeInsets.all(5.0),
             child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
                 children: [
-                    ToggleButtons(
-                        onPressed: (int index) {
-                            setState(() {
-                                widget.unselectAllElements();
-                                for (int i = 0; i < widget._selectionMode.length; i++) {
-                                    widget._selectionMode[i] = i == index;
-                                }
-                            });
-                        },
-                        borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        selectedBorderColor: cianColor.darker(0.3),
-                        selectedColor: Colors.white,
-                        disabledBorderColor: Colors.white,
-                        disabledColor: Colors.white,
-                        fillColor: cianColor.darker(0.2),
-                        color: cianColor.darker(0.2),
-                        isSelected: widget._selectionMode,
-                        children: selectionModeIcons,
+                    Row(
+                        children: [
+                            ToggleButtons(
+                                onPressed: (int index) {
+                                    setState(() {
+                                        widget.unselectAllElements();
+                                        for (int i = 0; i < widget._selectionMode.length; i++) {
+                                            widget._selectionMode[i] = i == index;
+                                        }
+                                    });
+                                },
+                                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                selectedBorderColor: cianColor.darker(0.3),
+                                selectedColor: Colors.white,
+                                disabledBorderColor: Colors.white,
+                                disabledColor: Colors.white,
+                                fillColor: cianColor.darker(0.2),
+                                color: cianColor.darker(0.2),
+                                isSelected: widget._selectionMode,
+                                children: selectionModeIcons,
+                            ),
+                            SizedBox(width: 24),
+                            ToggleButtons(
+                                onPressed: (int _) {
+                                    setState(() {
+                                        widget._hideElementsUI[0] = !widget._hideElementsUI[0];
+                                    });
+                                },
+                                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                selectedBorderColor: cianColor.darker(0.3),
+                                selectedColor: Colors.white,
+                                disabledBorderColor: Colors.white,
+                                disabledColor: Colors.white,
+                                fillColor: cianColor.darker(0.2),
+                                color: cianColor.darker(0.2),
+                                isSelected: widget._hideElementsUI,
+                                children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                            ),
+                        ],
                     ),
-                    SizedBox(width: 24),
-                    ToggleButtons(
-                        onPressed: (int _) {
-                            setState(() {
-                                widget._hideElementsUI[0] = !widget._hideElementsUI[0];
-                            });
-                        },
-                        borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        selectedBorderColor: cianColor.darker(0.3),
-                        selectedColor: Colors.white,
-                        disabledBorderColor: Colors.white,
-                        disabledColor: Colors.white,
-                        fillColor: cianColor.darker(0.2),
-                        color: cianColor.darker(0.2),
-                        isSelected: widget._hideElementsUI,
-                        children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+
+                    Row(
+                        children: [
+                            ToggleButtons(
+                                onPressed: (int _) {
+                                    setState(() {
+                                        widget._hideElementsUI[0] = !widget._hideElementsUI[0];
+                                    });
+                                },
+                                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                selectedBorderColor: cianColor.darker(0.3),
+                                selectedColor: Colors.white,
+                                disabledBorderColor: Colors.white,
+                                disabledColor: Colors.white,
+                                fillColor: cianColor.darker(0.2),
+                                color: cianColor.darker(0.2),
+                                isSelected: widget._hideElementsUI,
+                                children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                            ),
+                        ],
                     ),
                 ],
             ),
@@ -854,6 +915,87 @@ class _EditorBarState extends State<EditorBar> {
     }
 }
 
+
+class EditorOperationsBar extends StatefulWidget {
+    EditorOperationsBar(this.editor);
+
+    Editor editor;
+
+    @override
+    State<EditorOperationsBar> createState() => _EditorOperationsBarState();
+}
+
+
+class _EditorOperationsBarState extends State<EditorOperationsBar> {
+    bool _visible = false;
+    bool _changed = true;
+
+    @override
+    void initState() {
+        super.initState();
+        
+    }
+
+    @override
+    Widget build(BuildContext context) {
+        if (_changed) {
+            _changed = false;
+            return Container();
+        }
+        _visible = !widget.editor.selectedElements.isEmpty;
+        return Container(
+            padding: const EdgeInsets.all(5.0),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                    Visibility(
+                        maintainSize: true, 
+                        maintainAnimation: true,
+                        maintainState: true,
+                        visible: _visible, 
+                        child: Row(
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                                IconButton.filled(
+                                    onPressed: () {}, icon: const Icon(Icons.filter_drama)),
+                                SizedBox(width: 20),
+                                IconButton(
+                                    isSelected: true,
+                                    icon: const Icon(Icons.settings_outlined),
+                                    selectedIcon: const Icon(Icons.settings),
+                                    onPressed: () {},
+                                ),
+                                SizedBox(width: 20),
+                                MaterialButton(
+                                    height: 55,
+                                    minWidth: 40,
+                                    onPressed: () {
+                                        setState(() {
+                                            widget.editor.deleteSelectedElements();
+                                            _visible = false;
+                                            _changed = true;
+                                        });
+                                    },
+                                    color: pinkColor.darker(0.2),
+                                    textColor: Colors.white,
+                                    child: const Icon(
+                                       CadIcons.delete,
+                                       size: 32,
+                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        );
+    }
+}
 
 class BoxSelection {
     BoxSelection(this.start, this.end);
