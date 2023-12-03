@@ -75,6 +75,10 @@ Offset lerpOffset(Offset a, Offset b, double t) {
     return Offset(a.dx * (1.0 - t) + b.dx * t, a.dy * (1.0 - t) + b.dy * t);
 }
 
+Offset avgPoint(List<Offset> points) {
+    return points.reduce((a, b) => a + b) / points.length.toDouble();
+}
+
 double roundToPower(double value) {
     int t = 1 << 64;
 

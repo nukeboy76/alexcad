@@ -678,13 +678,8 @@ class Editor {
     }
 
     void drawDragBox(Window window, Painter painter, Input input) {
-        Offset selectedCentersSum = Offset(0, 0);
-        final int n = selectedElements.length;
-        if (n > 0) {
-            for (int i = 0; i < n; i++) {
-                selectedCentersSum += selectedElements[i].center; 
-            }
-            dragBoxPosition = selectedCentersSum / n.toDouble();
+        if (!selectedElements.isEmpty) {
+            dragBoxPosition = avgPoint(selectedElements.map((e) => e.center).toList());
             dragBoxRadius = 10 / window.zoom;
 
             final dragBoxPositionScreen = window.worldToScreen(dragBoxPosition);
@@ -987,16 +982,6 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                                IconButton.filled(
-                                    onPressed: () {}, icon: const Icon(Icons.filter_drama)),
-                                SizedBox(width: 20),
-                                IconButton(
-                                    isSelected: true,
-                                    icon: const Icon(Icons.settings_outlined),
-                                    selectedIcon: const Icon(Icons.settings),
-                                    onPressed: () {},
-                                ),
-                                SizedBox(width: 20),
                                 MaterialButton(
                                     height: 55,
                                     minWidth: 40,
