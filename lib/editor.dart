@@ -33,7 +33,6 @@ abstract class EditorView {
     });
 
     final editorElement;
-
     void render(Window window, Painter painter) {}
     void renderUI(Window window, Painter painter) {}
     bool? click(Window window, Offset mouseWorldClick) {}
@@ -50,6 +49,8 @@ abstract class EditorElement {
     Offset get center;
     Offset get position;
     void set position(Offset p);
+    double get length;
+
     bool selected;
 
     late InspectorView inspectorView;
@@ -96,6 +97,9 @@ class Node extends EditorElement {
 
     @override
     void set position(Offset p) => _position = p;
+
+    @override
+    double get length => 0;
 
     @override
     List<Node> getElementNodes() {
@@ -218,6 +222,7 @@ class Beam extends EditorElement {
         end.position -= offset;
     }
 
+    @override
     double get length => Offset(start.position.dx - end.position.dx, start.position.dy - end.position.dy).distance;
 
     double get rotation { 
@@ -260,55 +265,45 @@ class BeamEditorView extends EditorView {
     }
 
     void drawForceArrows(Window window, Painter painter) {
+        painter.setPaint(color: pinkColor.color);
+        if (editorElement.force.dx != 0) {
+            final bool xForcePositive = editorElement.force.dx > 0;
+
+            Offset beamVec = xForcePositive ? editorElement.start.position - editorElement.end.position :
+                                              editorElement.end.position - editorElement.start.position;
+
+            Offset triangleStep = beamVec * window.zoom * 0.001;
+            triangleStep = xForcePositive ? triangleStep : -triangleStep;
+            Offset gapStep = triangleStep;
+
+            Offset aPos = a - (a - editorElement.start.position) / 0.66;
+            Offset bPos = b - (b - editorElement.start.position) / 0.66;
+            Offset hPos = triangleStep + editorElement.start.position;
+
+            double length = 0;
+            double maxLength = editorElement.length - triangleStep.distance;
+
+            while (length <= maxLength) {
+                Offset aPosNew = aPos - triangleStep;
+                Offset bPosNew = bPos - triangleStep;
+                Offset hPosNew = hPos - triangleStep;
+
+                painter.drawTriangle(
+                    window,
+                    window.worldToScreen(aPosNew),
+                    window.worldToScreen(bPosNew),
+                    window.worldToScreen(hPosNew),
+                );
+
+                aPos = aPosNew - gapStep;
+                bPos = bPosNew - gapStep;
+                hPos = hPosNew - gapStep;
+
+                length += triangleStep.distance + gapStep.distance;
+            }
+        }
+
         painter.setPaint(color: cianColor.color);
-
-        //const double triangleStep = 10;
-        //int totalTriangles = ((editorElement.start.position - editorElement.end.position) / triangleStep).toInt();
-        //totalTriangles = totalTriangles < 1 ? 1 : totalTriangles; 
-
-        const lerpFactor = 0.1;
-        var aArrow = a;
-        var bArrow = b;
-
-        if (editorElement.force.dx > 0) {
-            final cStart = lerpOffset(editorElement.start.position, editorElement.end.position, lerpFactor);
-            for (
-                Offset cArrow = cStart;
-                (cArrow - editorElement.end.position).distance > 0.01;
-            ) {
-                painter.drawTriangle(
-                    window,
-                    window.worldToScreen(aArrow),
-                    window.worldToScreen(bArrow),
-                    window.worldToScreen(cArrow),
-                );
-
-                aArrow = lerpOffset(aArrow, c, lerpFactor);
-                bArrow = lerpOffset(bArrow, d, lerpFactor);
-                cArrow = lerpOffset(cArrow, editorElement.end.position, lerpFactor);
-            }
-        }
-        /*
-        if (editorElement.force.dx > 0) {
-            final cStart = lerpOffset(editorElement.start.position, editorElement.end.position, lerpFactor);
-            for (
-                Offset cArrow = cStart;
-                (cArrow - editorElement.end.position).distance > 0.01;
-            ) {
-                painter.drawTriangle(
-                    window,
-                    window.worldToScreen(aArrow),
-                    window.worldToScreen(bArrow),
-                    window.worldToScreen(cArrow),
-                );
-
-                aArrow = lerpOffset(aArrow, c, lerpFactor);
-                bArrow = lerpOffset(bArrow, d, lerpFactor);
-                cArrow = lerpOffset(cArrow, editorElement.end.position, lerpFactor);
-            }
-        }*/ else if (editorElement.force.dx < 0) {
-
-        }
     }
 
     void drawBeamCenter(Window window, Painter painter) {
@@ -537,6 +532,7 @@ class Editor {
                 end: nodes[5],
                 width: 1,
                 section: BeamSection.round,
+                force: Offset(-22, -22),
             ),
             Beam(
                 start: nodes[3],
@@ -618,7 +614,8 @@ class Editor {
         for (int i = 0; i < l; i++) {
             for (int j = i; j < l; j++) {
                 try {
-                    elements.add(
+                    elements.insert(
+                        0, 
                         Beam(
                             start: selectedNodes[i % l],
                             end: selectedNodes[j % l],
