@@ -51,7 +51,7 @@ class Inspector extends StatefulWidget {
         this.child,
     });
 
-    final Color color = amberColor.lighter(0.8);
+    final Color color = purpleColor.lighter(0.9);
     final List<dynamic> selectedElements;
     final double width;
     final double height;
@@ -75,6 +75,7 @@ class _InspectorState extends State<Inspector> {
             height: widget.height,
             color: widget.color,
             child: ListView(
+                padding: const EdgeInsets.all(8),
                 children: [
                     Text(
                         widget.title,
@@ -145,15 +146,12 @@ class _BeamWidgetState extends State<BeamWidget> {
                     labelX: "Fx",
                     labelY: "Fy",
                 ),
-                SingleValueWidget(
-                    onChange: (value) {
-                        setState(() {
-                            widget.beam.width = value;
-                        });
-                    },
-                    value: widget.beam.width,
-                    title: "Width",
-                    label: "F",
+                Row(
+                    children: [
+                        Text("Length"),
+                        Spacer(),
+                        Text("${widget.beam.length}")
+                    ]
                 ),
                 SingleValueWidget(
                     onChange: (value) {

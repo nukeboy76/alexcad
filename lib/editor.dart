@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -59,6 +60,8 @@ abstract class EditorElement {
     List<Node> getElementNodes() => [];
     void moveByDelta(Offset delta) {}
     void render(Window window, Painter painter) {}
+
+    Map toJson();
 }
 
 
@@ -105,6 +108,30 @@ class Node extends EditorElement {
     List<Node> getElementNodes() {
         return [this];
     }
+
+    factory Node.fromJson(dynamic json) {
+        final force = Offset(
+            json['forceX'] as double,
+            json['forceY'] as double,
+        );
+
+        NodeFixator fixator = NodeFixator.values.firstWhere((e) => e.toString() == 'NodeFixator.' + json['fixator'] as String);
+
+        return Node(
+            json['positionX'] as double,
+            json['positionY'] as double,
+            force: force,
+            fixator: fixator,
+        );
+    }
+
+    Map toJson() => {
+        'positionX': _position.dx,
+        'positionY': _position.dy,
+        'forceX': force.dx,
+        'forceY': force.dy,
+        'fixator': fixator.name,
+    };
 }
 
 
@@ -240,6 +267,32 @@ class Beam extends EditorElement {
         start.position -= delta;
         end.position -= delta;
     }
+
+    factory Beam.fromJson(dynamic json, Node start, Node end) {
+        final force = Offset(
+            json['forceX'] as double,
+            json['forceY'] as double,
+        );
+
+        return Beam(
+            start: start,
+            end: end,
+            force: force,
+            sectionArea: json['sectionArea'] as double,
+            elasticity: json['elasticity'] as double,
+            tension: json['tension'] as double, 
+        );
+    }
+
+    Map toJson(int startI, int endI) => {
+        'startI': startI,
+        'endI': endI,
+        'forceX': force.dx,
+        'forceY': force.dy,
+        'sectionArea': sectionArea,
+        'elasticity': elasticity,
+        'tension': tension,
+    };
 }
 
 
@@ -265,20 +318,24 @@ class BeamEditorView extends EditorView {
     }
 
     void drawForceArrows(Window window, Painter painter) {
+        const double tScale = 0.66;
+
         painter.setPaint(color: pinkColor.color);
         if (editorElement.force.dx != 0) {
             final bool xForcePositive = editorElement.force.dx > 0;
 
-            Offset beamVec = xForcePositive ? editorElement.start.position - editorElement.end.position :
-                                              editorElement.end.position - editorElement.start.position;
+            Offset beamVec = xForcePositive ? editorElement.end.position - editorElement.start.position :
+                                              editorElement.start.position - editorElement.end.position;
 
-            Offset triangleStep = beamVec * window.zoom * 0.001;
-            triangleStep = xForcePositive ? triangleStep : -triangleStep;
+            Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
             Offset gapStep = triangleStep;
 
-            Offset aPos = a - (a - editorElement.start.position) / 0.66;
-            Offset bPos = b - (b - editorElement.start.position) / 0.66;
-            Offset hPos = triangleStep + editorElement.start.position;
+            Offset aPos = xForcePositive ? c - (c - editorElement.end.position) / tScale :
+                                           a - (a - editorElement.start.position) / tScale;
+            Offset bPos = xForcePositive ? d - (d - editorElement.end.position) / tScale :
+                                           b - (b - editorElement.start.position) / tScale;
+            Offset hPos = xForcePositive ? editorElement.end.position + triangleStep :
+                                           editorElement.start.position + triangleStep;
 
             double length = 0;
             double maxLength = editorElement.length - triangleStep.distance;
@@ -304,10 +361,58 @@ class BeamEditorView extends EditorView {
         }
 
         painter.setPaint(color: cianColor.color);
+        /*
+        if (editorElement.force.dy != 0) {
+            final bool yForcePositive = editorElement.force.dy > 0;
+            //final bool flip = editorElement.start.position.dx >= editorElement.end.position.dx;
+
+            Offset beamVec = yForcePositive ? editorElement.end.position - editorElement.start.position :
+                                              editorElement.start.position - editorElement.end.position;
+
+            Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
+            Offset gapStep = triangleStep;
+
+            /*
+            final bFlipped = flip ? b : c;
+            final dFlipped = flip ? a : d;
+            final startFlipped = flip ? editorElement.end.position :
+                                        editorElement.start.position;
+            final endFlipped = flip ? editorElement.start.position :
+                                        editorElement.end.position;
+            */
+ 
+            Offset hPos = (yForcePositive ? d : b) - triangleStep + triangleStep * 1.5;
+            Offset aPos = (yForcePositive ? d : b) + triangleStep + triangleStep * 1.5;
+            Offset bPos = (yForcePositive ? editorElement.end.position :
+                                            editorElement.start.position) + triangleStep * 1.5;
+
+            double length = 0;
+            double maxLength = editorElement.length - triangleStep.distance;
+
+            while (length <= maxLength) {
+                Offset aPosNew = aPos - triangleStep;
+                Offset bPosNew = bPos - triangleStep;
+                Offset hPosNew = hPos - triangleStep;
+
+                painter.drawTriangle(
+                    window,
+                    window.worldToScreen(aPosNew),
+                    window.worldToScreen(bPosNew),
+                    window.worldToScreen(hPosNew),
+                );
+
+                aPos = aPosNew - gapStep;
+                bPos = bPosNew - gapStep;
+                hPos = hPosNew - gapStep;
+
+                length += triangleStep.distance + gapStep.distance;
+            }
+        }
+        */
     }
 
     void drawBeamCenter(Window window, Painter painter) {
-        final beamCenterOnScreen = window.worldToScreen(editorElement.center);
+        var beamCenterOnScreen = window.worldToScreen(editorElement.center);
         painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade900);
         for (final d in directions) {
             painter.drawLine(window, beamCenterOnScreen + d * centerCrossLength, beamCenterOnScreen - d * centerCrossLength);
@@ -509,9 +614,9 @@ class Editor {
             Node(0, 0, fixator: NodeFixator.hvt),
             Node(1, 0),
             Node(5, 0, fixator: NodeFixator.hvt),
-            Node(9, 10),
+            Node(9, 10, fixator: NodeFixator.hvt),
             Node(-5, 5),
-            Node(-9, 0),
+            Node(-9, 0, fixator: NodeFixator.h),
         ];
         nodes.add(Node(7, 7));
         var beams = [
@@ -545,6 +650,15 @@ class Editor {
         elements = List.from(beams)..addAll(nodes);
         bar = EditorBar(this);
         selectionState = EditorProcessSelectionState(this);
+
+        String jsonEditor = jsonEncode(elements[0]);
+        print(jsonEditor);
+
+        jsonEditor = jsonEncode(elements);
+        print(jsonEditor);
+    }
+
+    void saveInFile() {
     }
 
     late List<EditorElement> elements;
@@ -865,7 +979,7 @@ class _EditorBarState extends State<EditorBar> {
     @override
     Widget build(BuildContext context) {
         return Container(
-            color: amberColor.lighter(0.8),
+            color: purpleColor.lighter(0.925),
             padding: const EdgeInsets.all(5.0),
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -912,7 +1026,7 @@ class _EditorBarState extends State<EditorBar> {
                             ),
                         ],
                     ),
-
+/*
                     Row(
                         children: [
                             ToggleButtons(
@@ -933,6 +1047,7 @@ class _EditorBarState extends State<EditorBar> {
                             ),
                         ],
                     ),
+*/
                 ],
             ),
         );
