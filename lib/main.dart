@@ -116,25 +116,8 @@ class _CADEditorState extends State<CADEditor> {
        super.initState();
     } 
 
-    void _pickFiles() async {
-        FilePickerResult? result = await FilePicker.platform.pickFiles();
-
-        if (result != null) {
-          PlatformFile file = result.files.first;
-
-          print(file.name);
-          print(file.bytes);
-          print(file.size);
-          print(file.extension);
-          print(file.path);
-        } else {
-          // User canceled the picker
-        }
-    }
-
     @override
     Widget build(BuildContext context) {
-        //_pickFiles.call();
         return Row( 
             children: [
                 Column(

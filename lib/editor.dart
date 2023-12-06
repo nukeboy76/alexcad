@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'cad_colors.dart';
 import 'cad_icons.dart';
@@ -60,8 +62,6 @@ abstract class EditorElement {
     List<Node> getElementNodes() => [];
     void moveByDelta(Offset delta) {}
     void render(Window window, Painter painter) {}
-
-    Map toJson();
 }
 
 
@@ -75,7 +75,14 @@ class Node extends EditorElement {
         this._position = Offset(x, y);
         this.editorView = NodeEditorView(this);
         this.inspectorView = NodeInspectorView(this);
+
+        this.index = globalIndex;
+        globalIndex++;
+        print("Init node with index ${this.index}");
     }
+
+    static int globalIndex = 0;
+    late int index;
 
     /// Data
     Offset _position = Offset.infinite;
@@ -126,8 +133,9 @@ class Node extends EditorElement {
     }
 
     Map toJson() => {
-        'positionX': _position.dx,
-        'positionY': _position.dy,
+        'index': globalIndex,
+        'positionX': position.dx,
+        'positionY': position.dy,
         'forceX': force.dx,
         'forceY': force.dy,
         'fixator': fixator.name,
@@ -268,15 +276,20 @@ class Beam extends EditorElement {
         end.position -= delta;
     }
 
-    factory Beam.fromJson(dynamic json, Node start, Node end) {
+    factory Beam.fromJson(dynamic json, List<Node> nodes) {
         final force = Offset(
             json['forceX'] as double,
             json['forceY'] as double,
         );
 
+        int startI = json['startI'].toInt();
+        int endI = json['endI'].toInt();
+        print(startI);
+        print(endI);
+
         return Beam(
-            start: start,
-            end: end,
+            start: nodes[startI],
+            end: nodes[endI],
             force: force,
             sectionArea: json['sectionArea'] as double,
             elasticity: json['elasticity'] as double,
@@ -284,9 +297,9 @@ class Beam extends EditorElement {
         );
     }
 
-    Map toJson(int startI, int endI) => {
-        'startI': startI,
-        'endI': endI,
+    Map toJson() => {
+        'startI': start.index,
+        'endI': end.index,
         'forceX': force.dx,
         'forceY': force.dy,
         'sectionArea': sectionArea,
@@ -610,58 +623,60 @@ class Editor {
         this.dragBoxPosition = Offset.infinite,
         this.dragBoxRadius = 10,
     }) {
-        var nodes = [
-            Node(0, 0, fixator: NodeFixator.hvt),
-            Node(1, 0),
-            Node(5, 0, fixator: NodeFixator.hvt),
-            Node(9, 10, fixator: NodeFixator.hvt),
-            Node(-5, 5),
-            Node(-9, 0, fixator: NodeFixator.h),
-        ];
-        nodes.add(Node(7, 7));
-        var beams = [
-            Beam(
-                start: nodes[0],
-                end: nodes[1],
-                width: 1,
-                section: BeamSection.round,
-            ),
-            Beam(
-                start: nodes[2],
-                end: nodes[3],
-                width: 1,
-                section: BeamSection.round,
-            ),
-            Beam(
-                start: nodes[4],
-                end: nodes[5],
-                width: 1,
-                section: BeamSection.round,
-                force: Offset(-22, -22),
-            ),
-            Beam(
-                start: nodes[3],
-                end: nodes[5],
-                width: 1,
-                section: BeamSection.round,
-                force: Offset(22, 22),
-            ),
-        ];
-        elements = List.from(beams)..addAll(nodes);
+        loadElementsFromFile.call();
         bar = EditorBar(this);
         selectionState = EditorProcessSelectionState(this);
-
-        String jsonEditor = jsonEncode(elements[0]);
-        print(jsonEditor);
-
-        jsonEditor = jsonEncode(elements);
-        print(jsonEditor);
     }
 
-    void saveInFile() {
+
+    String elementsToJson() {
+        String nodesToJson = jsonEncode(nodes);
+        String beamsToJson = jsonEncode(beams);
+
+        String jsonEditorElements = "{\"nodes\":${nodesToJson},\"beams\":${beamsToJson}}";
+        return jsonEditorElements;
     }
 
-    late List<EditorElement> elements;
+    void jsonStringToElements(dynamic json) {
+        json = jsonDecode(json);
+        print(json);
+        var nodesJson = json['nodes'] as List;
+        List<Node> nodes = nodesJson.map((node) => Node.fromJson(node)).toList();
+
+        var beamsJson = json['beams'] as List;
+        List<Beam> beams = beamsJson.map((beam) => Beam.fromJson(beam, nodes)).toList();
+
+        print(elements);
+        elements = List.from(beams)..addAll(nodes);
+    }
+
+    void loadElementsFromFile() async {
+        try {
+            final file = await _localFile;
+            final contents = await file.readAsString();
+
+            jsonStringToElements(contents);
+        } catch (e) {
+            print(e);
+        }
+    }
+
+    Future<String> get _localPath async {
+        final directory = await getApplicationDocumentsDirectory();
+        return directory.path;
+    }
+
+    Future<File> get _localFile async {
+        final path = await _localPath;
+        return File('$path/cad_data.txt');
+    }
+
+    Future<File> writeElementsToFile() async {
+        final file = await _localFile;
+        return file.writeAsString(elementsToJson());
+    }
+
+    List<EditorElement> elements = [];
     List<EditorElement> selectedElements;
 
     List<Node> get nodes {
@@ -720,6 +735,11 @@ class Editor {
         if (input.keyboardEventBuffer.last == LogicalKeyboardKey.delete) {
             input.keyboardEventBuffer.removeLast();
             deleteSelectedElements();
+        }
+
+        if (input.keyboardEventBuffer.last == LogicalKeyboardKey.keyS) {
+            input.keyboardEventBuffer.removeLast();
+            writeElementsToFile.call();
         }
     }
 
@@ -1008,6 +1028,7 @@ class _EditorBarState extends State<EditorBar> {
                                 children: selectionModeIcons,
                             ),
                             SizedBox(width: 24),
+                            /*
                             ToggleButtons(
                                 onPressed: (int _) {
                                     setState(() {
@@ -1024,9 +1045,9 @@ class _EditorBarState extends State<EditorBar> {
                                 isSelected: widget._hideElementsUI,
                                 children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
                             ),
+                            */
                         ],
                     ),
-/*
                     Row(
                         children: [
                             ToggleButtons(
@@ -1047,7 +1068,6 @@ class _EditorBarState extends State<EditorBar> {
                             ),
                         ],
                     ),
-*/
                 ],
             ),
         );
