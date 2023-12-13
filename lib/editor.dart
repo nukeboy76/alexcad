@@ -78,7 +78,6 @@ class Node extends EditorElement {
 
         this.index = globalIndex;
         globalIndex++;
-        print("Init node with index ${this.index}");
     }
 
     static int globalIndex = 0;
@@ -174,6 +173,53 @@ class NodeEditorView extends EditorView {
         painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
     }
 
+    void drawForceArrows(Window window, Painter painter) {
+        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
+            final double arrowWidth = radius / 3;
+            final double arrowLength = 40 / window.zoom;
+            final double triangleRadius = radius / window.zoom; 
+            final Offset xArrowEnd = editorElement.position + Offset(0, arrowLength);
+            final Offset yArrowEnd = editorElement.position + Offset(arrowLength, 0);
+            final Offset xTrianglePoint = xArrowEnd + Offset(triangleRadius, 0);
+            final Offset yTrianglePoint = yArrowEnd + Offset(triangleRadius, 0);
+
+            painter.setPaint(color: cianColor.color, width: arrowWidth);
+            painter.drawLine(
+                window,
+                window.worldToScreen(editorElement.position),
+                window.worldToScreen(xArrowEnd),
+            );
+
+
+            var a = rotatePoint(xArrowEnd, xTrianglePoint, -pi / 6);
+            var b = rotatePoint(xArrowEnd, xTrianglePoint, -3 * pi / 2);
+            var c = rotatePoint(xArrowEnd, xTrianglePoint, -5 * pi / 6);
+            painter.drawTriangle(
+                window,
+                window.worldToScreen(a),
+                window.worldToScreen(b),
+                window.worldToScreen(c),
+            );
+
+            painter.setPaint(color: pinkColor.color, width: arrowWidth);
+            painter.drawLine(
+                window,
+                window.worldToScreen(editorElement.position),
+                window.worldToScreen(yArrowEnd),
+            );
+
+            a = rotatePoint(yArrowEnd, yTrianglePoint, 0);
+            b = rotatePoint(yArrowEnd, yTrianglePoint, 2 * pi / 3);
+            c = rotatePoint(yArrowEnd, yTrianglePoint, 4 * pi / 3);
+            painter.drawTriangle(
+                window,
+                window.worldToScreen(a),
+                window.worldToScreen(b),
+                window.worldToScreen(c),
+            );
+        }
+    }
+
     @override
     void renderUI(Window window, Painter painter) {
         if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
@@ -183,13 +229,15 @@ class NodeEditorView extends EditorView {
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
                 bgColor: Color(0x00ffffff),
-                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
+                textOffset: window.worldToScreen(editorElement.center),// + Offset(0, -forceLabelOffset),
                 outline: true,
                 outlineSize: 1.25,
                 centerAlignX: true,
                 centerAlignY: true,
             );
         }
+
+        drawForceArrows(window, painter);
     }
 
     @override
@@ -284,8 +332,6 @@ class Beam extends EditorElement {
 
         int startI = json['startI'].toInt();
         int endI = json['endI'].toInt();
-        print(startI);
-        print(endI);
 
         return Beam(
             start: nodes[startI],
@@ -372,56 +418,6 @@ class BeamEditorView extends EditorView {
                 length += triangleStep.distance + gapStep.distance;
             }
         }
-
-        painter.setPaint(color: cianColor.color);
-        /*
-        if (editorElement.force.dy != 0) {
-            final bool yForcePositive = editorElement.force.dy > 0;
-            //final bool flip = editorElement.start.position.dx >= editorElement.end.position.dx;
-
-            Offset beamVec = yForcePositive ? editorElement.end.position - editorElement.start.position :
-                                              editorElement.start.position - editorElement.end.position;
-
-            Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
-            Offset gapStep = triangleStep;
-
-            /*
-            final bFlipped = flip ? b : c;
-            final dFlipped = flip ? a : d;
-            final startFlipped = flip ? editorElement.end.position :
-                                        editorElement.start.position;
-            final endFlipped = flip ? editorElement.start.position :
-                                        editorElement.end.position;
-            */
- 
-            Offset hPos = (yForcePositive ? d : b) - triangleStep + triangleStep * 1.5;
-            Offset aPos = (yForcePositive ? d : b) + triangleStep + triangleStep * 1.5;
-            Offset bPos = (yForcePositive ? editorElement.end.position :
-                                            editorElement.start.position) + triangleStep * 1.5;
-
-            double length = 0;
-            double maxLength = editorElement.length - triangleStep.distance;
-
-            while (length <= maxLength) {
-                Offset aPosNew = aPos - triangleStep;
-                Offset bPosNew = bPos - triangleStep;
-                Offset hPosNew = hPos - triangleStep;
-
-                painter.drawTriangle(
-                    window,
-                    window.worldToScreen(aPosNew),
-                    window.worldToScreen(bPosNew),
-                    window.worldToScreen(hPosNew),
-                );
-
-                aPos = aPosNew - gapStep;
-                bPos = bPosNew - gapStep;
-                hPos = hPosNew - gapStep;
-
-                length += triangleStep.distance + gapStep.distance;
-            }
-        }
-        */
     }
 
     void drawBeamCenter(Window window, Painter painter) {
@@ -639,7 +635,6 @@ class Editor {
 
     void jsonStringToElements(dynamic json) {
         json = jsonDecode(json);
-        print(json);
         var nodesJson = json['nodes'] as List;
         List<Node> nodes = nodesJson.map((node) => Node.fromJson(node)).toList();
 
@@ -768,7 +763,6 @@ class Editor {
         elements.add(
             Node(pan.dx, pan.dy)
         );
-        print("added node in ${pan}");
     }
 
     void deleteSelectedElements() {

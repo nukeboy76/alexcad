@@ -14,6 +14,7 @@ import 'window.dart';
 
 
 const String defaultTextInputRegExpTemplate = '[0-9\.\-]';
+const String positiveTextInputRegExpTemplate = '[0-9\.]';
 
 
 abstract class InspectorView {
@@ -162,6 +163,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                     value: widget.beam.sectionArea,
                     title: "Section area",
                     label: "Area",
+                    overrideFormatter: FilteringTextInputFormatter.allow(RegExp(positiveTextInputRegExpTemplate)),
                 ),
                 SingleValueWidget(
                     onChange: (value) {
@@ -171,6 +173,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                     },
                     value: widget.beam.elasticity,
                     title: "Elasticity",
+                    overrideFormatter: FilteringTextInputFormatter.allow(RegExp(positiveTextInputRegExpTemplate)),
                 ),
                 SingleValueWidget(
                     onChange: (value) {
@@ -180,6 +183,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                     },
                     value: widget.beam.tension,
                     title: "Tension",
+                    overrideFormatter: FilteringTextInputFormatter.allow(RegExp(positiveTextInputRegExpTemplate)),
                 ),
             ],
         );
@@ -351,7 +355,12 @@ class SingleValueWidget extends StatelessWidget {
         required this.value,
         this.title = "Value",
         this.label = "",
-    });
+        TextInputFormatter? overrideFormatter,
+    }) {
+        if (overrideFormatter != null) {
+            formatter = overrideFormatter;
+        }
+    }
 
     final onChange;
     final value;
