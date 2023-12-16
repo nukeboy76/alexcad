@@ -183,13 +183,14 @@ class NodeEditorView extends EditorView {
             final Offset xTrianglePoint = xArrowEnd + Offset(triangleRadius, 0);
             final Offset yTrianglePoint = yArrowEnd + Offset(triangleRadius, 0);
 
+            final Offset forceLabelOffset = Offset(0, -15);
+
             painter.setPaint(color: cianColor.color, width: arrowWidth);
             painter.drawLine(
                 window,
                 window.worldToScreen(editorElement.position),
                 window.worldToScreen(xArrowEnd),
             );
-
 
             var a = rotatePoint(xArrowEnd, xTrianglePoint, -pi / 6);
             var b = rotatePoint(xArrowEnd, xTrianglePoint, -3 * pi / 2);
@@ -199,6 +200,18 @@ class NodeEditorView extends EditorView {
                 window.worldToScreen(a),
                 window.worldToScreen(b),
                 window.worldToScreen(c),
+            );
+            painter.drawText(
+                window: window,
+                text: '${editorElement.force.dx.toStringAsFixed(2)}',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: Color(0x00ffffff),
+                textOffset: window.worldToScreen(b) + forceLabelOffset / 2,
+                outline: true,
+                outlineSize: 1.25,
+                centerAlignX: true,
+                centerAlignY: true,
             );
 
             painter.setPaint(color: pinkColor.color, width: arrowWidth);
@@ -217,26 +230,23 @@ class NodeEditorView extends EditorView {
                 window.worldToScreen(b),
                 window.worldToScreen(c),
             );
-        }
-    }
-
-    @override
-    void renderUI(Window window, Painter painter) {
-        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
             painter.drawText(
                 window: window,
-                text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
+                text: '${editorElement.force.dy.toStringAsFixed(2)}',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
                 bgColor: Color(0x00ffffff),
-                textOffset: window.worldToScreen(editorElement.center),// + Offset(0, -forceLabelOffset),
+                textOffset: window.worldToScreen(a) - forceLabelOffset,
                 outline: true,
                 outlineSize: 1.25,
                 centerAlignX: true,
                 centerAlignY: true,
             );
         }
+    }
 
+    @override
+    void renderUI(Window window, Painter painter) {
         drawForceArrows(window, painter);
     }
 
@@ -887,7 +897,8 @@ class Grid {
 
         final centerStep = step * step * (window.zoom); //step * step * zoom;
 
-        Offset screenPan = -window.size * 2 + ((window.size * 2) % centerStep) + window.pan % centerStep;
+        const double panOffset = 2;
+        Offset screenPan = -window.size * panOffset + (window.size * panOffset) % centerStep + window.pan % centerStep;
 
         for (final direction in directions) {
             double count = 0;
