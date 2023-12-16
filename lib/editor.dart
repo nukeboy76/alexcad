@@ -878,12 +878,8 @@ class Editor {
 class Grid {
     void draw(Window window, Painter painter) {
         final double depth = 1;
-        final double gridSteps = 5;
         final double step = 5 * depth;
-        final List<Offset> directions = [
-            Offset(0, step),
-            Offset(step, 0),
-        ];
+        final double gridSteps = 5;
         final double border = 20;
         final double depthStep = window.zoom;
         final double borderHeight = window.height - 1.1 * border;
@@ -891,26 +887,11 @@ class Grid {
 
         final centerStep = step * step * (window.zoom); //step * step * zoom;
 
-        /*
-        print("Center step $centerStep");
-        print(width % centerStep);
-        print(width - width % centerStep);
-        print(pan.dx);
-        print(pan.dx % (width - width % centerStep));
-        */
-
-        //Offset screenPan = Offset(window.pan.dx % (window.width - window.width % centerStep),
-        //                          window.pan.dy % (window.height - window.height % centerStep)) - window.center * window.zoom;
-
-        Offset screenPan = -window.size + (window.size % centerStep) + window.pan % centerStep;
-
-        //painter.drawCircle(window, screenPan, 200);
-        //print(window.zoom);
-        //print(depth);
+        Offset screenPan = -window.size * 2 + ((window.size * 2) % centerStep) + window.pan % centerStep;
 
         for (final direction in directions) {
             double count = 0;
-            for (Offset i = screenPan; count < window.width / window.zoom; i += direction * window.zoom) {
+            for (Offset i = screenPan; count < window.height / window.zoom; i += direction * window.zoom * step) {
                 count % gridSteps == 0 ? painter.setPaint(color: Colors.black, width: 1) :
                                     painter.setPaint(color: Colors.grey.shade400, width: 1);
                 painter.drawLine(window, Offset(i.dx, 0), Offset(i.dx, window.height));
@@ -937,8 +918,7 @@ class Grid {
             final bool isVertical = (direction.dx == 0);
             bool clamped = false;
             double count = 0;
-            for (Offset i = screenPan; count < window.width / window.zoom; i += direction * window.zoom * step * depth) {
-                //painter.drawCircle(window, i, 30);
+            for (Offset i = screenPan; count < window.width / window.zoom; i += direction * window.zoom * step * step) {
                 final Offset textOffset = isVertical ? Offset(window.pan.dx.clamp(border, borderWidth), i.dy) :
                                                        Offset(i.dx, window.pan.dy.clamp(border, borderHeight));
                 clamped = (textOffset.dx == border || textOffset.dy == border ||
@@ -1081,7 +1061,7 @@ class EditorOperationsBar extends StatefulWidget {
 
 
 class _EditorOperationsBarState extends State<EditorOperationsBar> {
-    bool _visible = false;
+    bool _visible = true;
     bool _changed = true;
 
     @override
@@ -1098,74 +1078,68 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                    Visibility(
-                        maintainSize: true, 
-                        maintainAnimation: true,
-                        maintainState: true,
-                        visible: _visible, 
-                        child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                                MaterialButton(
-                                    height: 55,
-                                    minWidth: 40,
-                                    onPressed: () {
-                                        setState(() {
-                                            widget.editor.addNodeInCenter(widget.window.panWorld);
-                                            _visible = false;
-                                            _changed = true;
-                                        });
-                                    },
-                                    color: cianColor.darker(0.2),
-                                    textColor: Colors.white,
-                                    child: const Icon(
-                                       CadIcons.addPlus,
-                                       size: 32,
-                                    ),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                    Row(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                            widget.editor.bar.isNodeSelectionMode ? MaterialButton(
+                                height: 55,
+                                minWidth: 40,
+                                onPressed: () {
+                                    setState(() {
+                                        widget.editor.addNodeInCenter(widget.window.panWorld);
+                                        _visible = false;
+                                        _changed = true;
+                                    });
+                                },
+                                color: cianColor.darker(0.2),
+                                textColor: Colors.white,
+                                child: const Icon(
+                                   CadIcons.addPlus,
+                                   size: 32,
                                 ),
-                                SizedBox(width: 20),
-                                widget.editor.bar.isNodeSelectionMode ? MaterialButton(
-                                    height: 55,
-                                    minWidth: 40,
-                                    onPressed: () {
-                                        setState(() {
-                                            widget.editor.makeBeamsBetweenSelectedNodes();
-                                            _visible = false;
-                                            _changed = true;
-                                        });
-                                    },
-                                    color: cianColor.darker(0.2),
-                                    textColor: Colors.white,
-                                    child: const Icon(
-                                       CadIcons.cheese,
-                                       size: 32,
-                                    ),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
-                                ) : SizedBox.shrink(),
-                                widget.editor.bar.isNodeSelectionMode ? SizedBox(width: 20) : SizedBox.shrink(),
-                                MaterialButton(
-                                    height: 55,
-                                    minWidth: 40,
-                                    onPressed: () {
-                                        setState(() {
-                                            widget.editor.deleteSelectedElements();
-                                            _visible = false;
-                                            _changed = true;
-                                        });
-                                    },
-                                    color: pinkColor.darker(0.2),
-                                    textColor: Colors.white,
-                                    child: const Icon(
-                                       CadIcons.delete,
-                                       size: 32,
-                                    ),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                            ) : SizedBox.shrink(),
+                            SizedBox(width: 20),
+                            widget.editor.bar.isNodeSelectionMode ? MaterialButton(
+                                height: 55,
+                                minWidth: 40,
+                                onPressed: () {
+                                    setState(() {
+                                        widget.editor.makeBeamsBetweenSelectedNodes();
+                                        _visible = false;
+                                        _changed = true;
+                                    });
+                                },
+                                color: cianColor.darker(0.2),
+                                textColor: Colors.white,
+                                child: const Icon(
+                                   CadIcons.cheese,
+                                   size: 32,
                                 ),
-                            ],
-                        ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                            ) : SizedBox.shrink(),
+                            widget.editor.bar.isNodeSelectionMode ? SizedBox(width: 20) : SizedBox.shrink(),
+                            _visible ? MaterialButton(
+                                height: 55,
+                                minWidth: 40,
+                                onPressed: () {
+                                    setState(() {
+                                        widget.editor.deleteSelectedElements();
+                                        _visible = false;
+                                        _changed = true;
+                                    });
+                                },
+                                color: pinkColor.darker(0.2),
+                                textColor: Colors.white,
+                                child: const Icon(
+                                   CadIcons.delete,
+                                   size: 32,
+                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                            ) : SizedBox.shrink(),
+                        ],
                     ),
                 ],
             ),
