@@ -7,6 +7,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:scidart/numdart.dart';
+import 'package:scidart/scidart.dart';
 
 import 'cad_colors.dart';
 import 'cad_icons.dart';
@@ -1155,5 +1157,43 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                 ],
             ),
         );
+    }
+}
+
+class Calculations {
+    double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;
+
+    Array2d getMatrixA(List<Beam> beams) {
+        final int beamsLength = beams.length;
+
+        var matrix = Array2d.empty();
+        var firstLine = List.from([k(beams[0]), -k(beams[0])])
+            ..addAll(List<int>.filled(beamsLength - 2, 0, growable: true));
+
+        matrix.add(firstLine);
+
+        for (int i = 1; i < beamsLength; i++) {
+            final line = List.from(List<int>.filled(i, 0, growable: true))
+                ..addAll([-k(beams[i - 1]), k(beams[i - 1]) + k(beams[i]), -k(beams[i])])
+                ..addAll(List<int>.filled(beamsLength - i - 3, 0, growable: true));
+            matrix.add(line);
+        }
+
+        var lastLine = List.from(List<int>.filled(beamsLength - 2, 0, growable: true))
+            ..addAll([-k(beams[beamsLength - 1]), k(beams[beamsLength - 1])]);
+        matrix.add(lastLine);
+
+        return matrix;
+    }
+
+    Array2d getMatrixB(List<Beam> beams) {
+        var matrix = Array2d.empty();
+        return matrix;
+    }
+
+    Array2d getDelta(Array2d a, Array2d b) {
+        final delta = matrixSolve(a, b);
+        print(delta);
+        return delta;
     }
 }
