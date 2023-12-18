@@ -79,6 +79,7 @@ class Node extends EditorElement {
         this.inspectorView = NodeInspectorView(this);
 
         this.index = globalIndex;
+        print("Create node ${globalIndex}");
         globalIndex++;
     }
 
@@ -134,7 +135,6 @@ class Node extends EditorElement {
     }
 
     Map toJson() => {
-        'index': globalIndex,
         'positionX': position.dx,
         'positionY': position.dy,
         'forceX': force.dx,
@@ -179,33 +179,39 @@ class NodeEditorView extends EditorView {
         if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
             final double arrowWidth = radius / 3;
             final double arrowLength = 40 / window.zoom;
-            final double triangleRadius = radius / window.zoom; 
-            final Offset xArrowEnd = editorElement.position + Offset(0, arrowLength);
-            final Offset yArrowEnd = editorElement.position + Offset(arrowLength, 0);
-            final Offset xTrianglePoint = xArrowEnd + Offset(triangleRadius, 0);
-            final Offset yTrianglePoint = yArrowEnd + Offset(triangleRadius, 0);
+            final double triangleRadius = radius / window.zoom;
+
+            final double flipX = editorElement.force.dx >= 0 ? 1 : -1;
+            final double flipY = editorElement.force.dy >= 0 ? 1 : -1;
+            final Offset yArrowEnd = editorElement.position + Offset(0, arrowLength) * flipY;
+            final Offset xArrowEnd = editorElement.position + Offset(arrowLength, 0) * flipX;
+            final Offset yTrianglePoint = yArrowEnd + Offset(triangleRadius, 0) * flipY;
+            final Offset xTrianglePoint = xArrowEnd + Offset(triangleRadius, 0) * flipX;
 
             final Offset forceLabelOffset = Offset(0, -15);
 
-            painter.setPaint(color: cianColor.color, width: arrowWidth);
-            painter.drawLine(
-                window,
-                window.worldToScreen(editorElement.position),
-                window.worldToScreen(xArrowEnd),
-            );
+            painter.setPaint(color: purpleColor.color, width: arrowWidth);
 
-            var a = rotatePoint(xArrowEnd, xTrianglePoint, -pi / 6);
-            var b = rotatePoint(xArrowEnd, xTrianglePoint, -3 * pi / 2);
-            var c = rotatePoint(xArrowEnd, xTrianglePoint, -5 * pi / 6);
+            var a = rotatePoint(yArrowEnd, yTrianglePoint, -pi / 6 * flipY);
+            var b = rotatePoint(yArrowEnd, yTrianglePoint, -3 * pi / 2 * flipY);
+            var c = rotatePoint(yArrowEnd, yTrianglePoint, -5 * pi / 6 * flipY);
+
+            /*
             painter.drawTriangle(
                 window,
                 window.worldToScreen(a),
                 window.worldToScreen(b),
                 window.worldToScreen(c),
             );
+            painter.drawLine(
+                window,
+                window.worldToScreen(editorElement.position),
+                window.worldToScreen(yArrowEnd),
+            );
+
             painter.drawText(
                 window: window,
-                text: '${editorElement.force.dx.toStringAsFixed(2)}',
+                text: '${editorElement.force.dy.toStringAsFixed(2)}',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
                 bgColor: Color(0x00ffffff),
@@ -215,26 +221,27 @@ class NodeEditorView extends EditorView {
                 centerAlignX: true,
                 centerAlignY: true,
             );
+            */
 
-            painter.setPaint(color: pinkColor.color, width: arrowWidth);
-            painter.drawLine(
-                window,
-                window.worldToScreen(editorElement.position),
-                window.worldToScreen(yArrowEnd),
-            );
+            painter.setPaint(color: purpleColor.color, width: arrowWidth);
 
-            a = rotatePoint(yArrowEnd, yTrianglePoint, 0);
-            b = rotatePoint(yArrowEnd, yTrianglePoint, 2 * pi / 3);
-            c = rotatePoint(yArrowEnd, yTrianglePoint, 4 * pi / 3);
+            a = rotatePoint(xArrowEnd, xTrianglePoint, 0);
+            b = rotatePoint(xArrowEnd, xTrianglePoint, 2 * pi / 3 * flipX);
+            c = rotatePoint(xArrowEnd, xTrianglePoint, 4 * pi / 3 * flipX);
             painter.drawTriangle(
                 window,
                 window.worldToScreen(a),
                 window.worldToScreen(b),
                 window.worldToScreen(c),
             );
+            painter.drawLine(
+                window,
+                window.worldToScreen(editorElement.position),
+                window.worldToScreen(xArrowEnd),
+            );
             painter.drawText(
                 window: window,
-                text: '${editorElement.force.dy.toStringAsFixed(2)}',
+                text: '${editorElement.force.dx.toStringAsFixed(2)}',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
                 bgColor: Color(0x00ffffff),
@@ -653,7 +660,6 @@ class Editor {
         var beamsJson = json['beams'] as List;
         List<Beam> beams = beamsJson.map((beam) => Beam.fromJson(beam, nodes)).toList();
 
-        print(elements);
         elements = List.from(beams)..addAll(nodes);
     }
 
@@ -799,6 +805,7 @@ class Editor {
             if (nodesToRemove.contains(n)) nodes.remove(n);
             if (nodesToRemove.contains(n)) elements.remove(n);
         }
+
         resetSelectionState();
     }
 
@@ -1035,6 +1042,69 @@ class _EditorBarState extends State<EditorBar> {
                             */
                         ],
                     ),
+                    ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Stack(
+                            children: <Widget>[
+                                Positioned.fill(
+                                    child: Container(
+                                        decoration: const BoxDecoration(
+                                            gradient: LinearGradient(
+                                                colors: <Color>[
+                                                    Color(0xFF0D47A1),
+                                                    Color(0xFF1976D2),
+                                                    Color(0xFF42A5F5),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                TextButton(
+                                    style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.all(16.0),
+                                        textStyle: const TextStyle(fontSize: 20),
+                                    ),
+                                    onPressed: () {
+                                        Calculation calc = Calculation();
+                                        var delta = calc.getDelta(widget.editor.beams);
+                                    },
+                                    child: const Text('Чиназес'),
+                                ),
+                            ],
+                        ),
+                    ),
+                    ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Stack(
+                            children: <Widget>[
+                                Positioned.fill(
+                                    child: Container(
+                                        decoration: const BoxDecoration(
+                                            gradient: LinearGradient(
+                                                colors: <Color>[
+                                                    Color(0xFF0D47A1),
+                                                    Color(0xFF1976D2),
+                                                    Color(0xFF42A5F5),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                TextButton(
+                                    style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.all(16.0),
+                                        textStyle: const TextStyle(fontSize: 20),
+                                    ),
+                                    onPressed: () {
+                                        widget.editor.writeElementsToFile();
+                                    },
+                                    child: const Text('Сохранить'),
+                                ),
+                            ],
+                        ),
+                    ),
                     Row(
                         children: [
                             ToggleButtons(
@@ -1160,38 +1230,58 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
     }
 }
 
-class Calculations {
+class Calculation {
     double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;
+    Array2d q(Beam beam) {
+        final double value = -(beam.start.force.dx * beam.length) / 2;
+        return Array2d([
+            Array([value]),
+            Array([value]),
+        ]);
+    }
 
-    Array2d getMatrixA(List<Beam> beams) {
+    Array2d _getMatrixA(List<Beam> beams) {
         final int beamsLength = beams.length;
-
         var matrix = Array2d.empty();
-        var firstLine = List.from([k(beams[0]), -k(beams[0])])
-            ..addAll(List<int>.filled(beamsLength - 2, 0, growable: true));
 
+        var firstLine = Array(List.from([k(beams[0]), -k(beams[0])])
+            ..addAll(List<double>.filled(beamsLength - 1, 0.0)));
         matrix.add(firstLine);
 
         for (int i = 1; i < beamsLength; i++) {
-            final line = List.from(List<int>.filled(i, 0, growable: true))
+            final line = Array(List.from(List<double>.filled(i - 1, 0.0))
                 ..addAll([-k(beams[i - 1]), k(beams[i - 1]) + k(beams[i]), -k(beams[i])])
-                ..addAll(List<int>.filled(beamsLength - i - 3, 0, growable: true));
+                ..addAll(List<double>.filled(beamsLength - i - 1, 0.0)));
             matrix.add(line);
         }
 
-        var lastLine = List.from(List<int>.filled(beamsLength - 2, 0, growable: true))
-            ..addAll([-k(beams[beamsLength - 1]), k(beams[beamsLength - 1])]);
+        var lastLine = Array(List.from(List<double>.filled(beamsLength - 1, 0.0))
+            ..addAll([-k(beams[beamsLength - 1]), k(beams[beamsLength - 1])]));
         matrix.add(lastLine);
 
+        print(matrix);
+
         return matrix;
     }
 
-    Array2d getMatrixB(List<Beam> beams) {
+    Array2d _getMatrixB(List<Beam> beams) {
+        final int beamsLength = beams.length;
         var matrix = Array2d.empty();
+
+        matrix.add(beams.first.start.fixator == NodeFixator.disabled ? Array([-q(beams.first)[0][0] + beams.first.force.dx]) : Array([0.0]));
+        for (int i = 1; i < beamsLength; i++) {
+            matrix.add(Array([-q(beams[i-1])[0][0] - q(beams[i])[0][0] + beams[i].force.dx]));
+        }
+        matrix.add(beams.last.end.fixator == NodeFixator.disabled ? Array([-q(beams.last)[0][0] + beams.last.force.dx]) : Array([0.0]));
+
+        print(matrix);
+
         return matrix;
     }
 
-    Array2d getDelta(Array2d a, Array2d b) {
+    Array2d getDelta(List<Beam> beams) {
+        final a = _getMatrixA(beams);
+        final b = _getMatrixB(beams);
         final delta = matrixSolve(a, b);
         print(delta);
         return delta;
