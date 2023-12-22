@@ -71,19 +71,21 @@ class _InspectorState extends State<Inspector> {
 
     @override
     Widget build(BuildContext context) {
-        return Container(
-            width: widget.width,
-            height: widget.height,
-            color: widget.color,
-            child: ListView(
-                padding: const EdgeInsets.all(8),
-                children: [
-                    Text(
-                        widget.title,
-                        textAlign: TextAlign.center,
-                    ),
-                    selectedElementsLength != 1 ? Row() : widget.selectedElements[0].inspectorView.widget,
-                ],
+        return SingleChildScrollView(
+            child: Container(
+                width: widget.width,
+                height: widget.height,
+                color: widget.color,
+                child: ListView(
+                    padding: const EdgeInsets.all(8),
+                    children: [
+                        Text(
+                            widget.title,
+                            textAlign: TextAlign.center,
+                        ),
+                        selectedElementsLength != 1 ? Row() : widget.selectedElements[0].inspectorView.widget,
+                    ],
+                ),
             ),
         );
     }
@@ -242,7 +244,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                     labelX: "Fx",
                     labelY: "Fy",
                 ),
-                Text("Node parameters"),
+                //Text("Node parameters"),
                 SingleValueWidget(
                     onChange: (value) {
                         setState(() {

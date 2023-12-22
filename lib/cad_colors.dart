@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'utils/utils.dart';
 import 'utils/colors.dart';
 
 
-const cianColor = const CadColor(Color(0xff48e9f6));
-const amberColor = const CadColor(Color(0xfffab167));
-const pinkColor = const CadColor(Color(0xffe63484));
-const purpleColor = const CadColor(Color(0xff7d25ca));
+const cianColor = CadColor(Color(0xff48e9f6));
+const amberColor = CadColor(Color(0xfffab167));
+const pinkColor = CadColor(Color(0xffe63484));
+const purpleColor = CadColor(Color(0xff7d25ca));
 
 
 class CadColor {

@@ -67,7 +67,7 @@ class Input {
     }
 
     /// TODO: Flutter can't detect current mouse up button, always return event.buttons.
-    /// Need to finde the way how to differ it.
+    /// Need to find correct way how to differ it.
     void handlePointerUp(Window window, PointerEvent event) {
         isLMBDown = false;
         isRMBDown = false;

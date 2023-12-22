@@ -11,15 +11,15 @@ void rebuildAllChildren(BuildContext context) {
 }
 
 final List<Offset> directions = [
-    Offset(1, 0),
-    Offset(0, 1),
+    const Offset(1, 0),
+    const Offset(0, 1),
 ];
 
 final List<Offset> allDirections = [
-    Offset(1, 0),
-    Offset(-1, 0),
-    Offset(0, 1),
-    Offset(0, -1),
+    const Offset(1, 0),
+    const Offset(-1, 0),
+    const Offset(0, 1),
+    const Offset(0, -1),
 ];
 
 bool xAxisEqual(Offset a, Offset b) => a.dx == b.dx;
@@ -77,18 +77,4 @@ Offset lerpOffset(Offset a, Offset b, double t) {
 
 Offset avgPoint(List<Offset> points) {
     return points.reduce((a, b) => a + b) / points.length.toDouble();
-}
-
-double roundToPower(double value) {
-    int t = 1 << 64;
-
-    int x = value.toInt();
-
-    if (value >= 1) {
-
-    } else {
-        x = (1 / value).toInt();
-    }
-
-    return value;
 }
