@@ -29,7 +29,8 @@ class MyApp extends StatelessWidget {
     @override
     Widget build(BuildContext context) {
         return MaterialApp(
-            title: 'Flutter Demo',
+            debugShowCheckedModeBanner: false,
+            title: 'alexcad',
             theme: ThemeData(
                 colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                 useMaterial3: true,
@@ -46,12 +47,12 @@ class CADEditor extends StatefulWidget {
     const CADEditor({super.key});
 
     @override
-    State<CADEditor> createState() => _CADEditorState();
+    State<CADEditor> createState() => CADEditorState();
 }
 
 
-class _CADEditorState extends State<CADEditor> {
-    _CADEditorState() {
+class CADEditorState extends State<CADEditor> {
+    CADEditorState() {
         input = Input(barHeight: barHeight);
     }
 
@@ -61,7 +62,6 @@ class _CADEditorState extends State<CADEditor> {
     Editor editor = Editor();
 
     Painter painter = Painter();
-    FocusNode _focus = new FocusNode();
 
     double get inspectorWidth => 300;
     double get barHeight => 60;
@@ -118,22 +118,25 @@ class _CADEditorState extends State<CADEditor> {
 
     @override
     Widget build(BuildContext context) {
+        final height = (MediaQuery.of(context).size.height).clamp(0.0, double.infinity);
+        final editorHeight = (MediaQuery.of(context).size.height - barHeight).clamp(0.0, double.infinity);
+        final editorWidth = (MediaQuery.of(context).size.width - inspectorWidth).clamp(0.0, double.infinity);
         return Row( 
             children: [
                 Column(
                     children: [
-                        Container(
-                            width: MediaQuery.of(context).size.width - inspectorWidth,
+                        EditorBar(
+                            editor,
                             height: barHeight,
-                            child: editor.bar,
+                            width: editorWidth,
                         ),
                         Stack(
                             children: [
                                 Container(
-                                    height: MediaQuery.of(context).size.height - barHeight,
+                                    height: editorHeight,
                                     child: RawKeyboardListener(
                                         autofocus: true,
-                                        focusNode: _focus,
+                                        focusNode: editor.focus,
                                         onKey: _handleKeyEvent,
                                         child: MouseRegion(
                                             onHover: _handlePointerMove,
@@ -147,8 +150,8 @@ class _CADEditorState extends State<CADEditor> {
                                                     }
                                                 },
                                                 child: Container(
-                                                    width: MediaQuery.of(context).size.width - inspectorWidth,
-                                                    height: MediaQuery.of(context).size.height,
+                                                    width: editorWidth,
+                                                    height: height,
                                                     color: Colors.white,
                                                     child: CustomPaint(
                                                         //size: Size.infinite,
@@ -160,31 +163,34 @@ class _CADEditorState extends State<CADEditor> {
                                             ),
                                         ),
                                     ),
-                                ),                                        
-                                Container(
-                                    width: MediaQuery.of(context).size.width - inspectorWidth,
+                                ),
+                                EditorOperationsBar(
+                                    editor,
+                                    window,
+                                    width: editorWidth,
                                     height: barHeight,
-                                    child: EditorOperationsBar(editor, window),
+                                ),
+                                FileOperationsBar(
+                                    editor,
+                                    width: editorWidth,
+                                    height: editorHeight,
                                 ),
                             ],
                         ),
                     ],
                 ),
-                SingleChildScrollView(
-                    child: Inspector(
-                        editor.selectedElements,
-                        width: inspectorWidth,
-                        height: MediaQuery.of(context).size.height,
-                    ),
+                Inspector(
+                    editor.selectedElements,
+                    width: inspectorWidth,
+                    height: height,
                 ),
             ],
         );
     }
 }
 
-
 class CADEditorRenderer extends CustomPainter {
-    _CADEditorState cad;
+    CADEditorState cad;
     CADEditorRenderer({required this.cad});
 
     @override
@@ -196,4 +202,37 @@ class CADEditorRenderer extends CustomPainter {
 
     @override
     bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
+class FileOperationsBar extends StatefulWidget {
+    FileOperationsBar(
+        this.editor, {
+        required this.width,
+        required this.height,
+    });
+
+    final Editor editor;
+    final double width;
+    final double height;
+
+    @override
+    State<FileOperationsBar> createState() => _FileOperationsBarState();
+}
+
+class _FileOperationsBarState extends State<FileOperationsBar> {
+    @override
+    Widget build(BuildContext context) {
+        if (!widget.editor.showCalcOverlay) return SizedBox.shrink();
+        return Container(
+            width: widget.width,
+            height: widget.height,
+            alignment: Alignment.centerLeft,
+            color: Colors.white,
+            child: Row(
+                children: [
+                    //TODO
+                ],
+            ),
+        );
+    }
 }

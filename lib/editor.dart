@@ -2,13 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:scidart/numdart.dart';
-import 'package:scidart/scidart.dart';
 
 import 'cad_colors.dart';
 import 'cad_icons.dart';
@@ -40,8 +38,8 @@ abstract class EditorView {
     final editorElement;
     void render(Window window, Painter painter) {}
     void renderUI(Window window, Painter painter) {}
-    bool? click(Window window, Offset mouseWorldClick) {}
-    bool? boxSelect(BoxSelection selection) {}
+    bool click(Window window, Offset mouseWorldClick) => true;
+    bool boxSelect(BoxSelection selection) => true;
     void refreshCanvasData() {}
 }
 
@@ -53,7 +51,7 @@ abstract class EditorElement {
 
     Offset get center;
     Offset get position;
-    void set position(Offset p);
+    set position(Offset p);
     double get length;
 
     bool selected;
@@ -62,12 +60,10 @@ abstract class EditorElement {
     late EditorView editorView;
 
     List<Node> getElementNodes() => [];
-    void moveByDelta(Offset delta) {}
-    void render(Window window, Painter painter) {}
 }
 
 
-class Node extends EditorElement {
+class Node implements EditorElement {
     Node(double x, double y, {
         this.selected = false,
         this.force = const Offset(0, 0),
@@ -79,7 +75,6 @@ class Node extends EditorElement {
         this.inspectorView = NodeInspectorView(this);
 
         this.index = globalIndex;
-        print("Create node ${globalIndex}");
         globalIndex++;
     }
 
@@ -92,14 +87,17 @@ class Node extends EditorElement {
     double torqueForce;
     NodeFixator fixator;
 
-    bool selected;
-
-    late EditorView editorView;
-    late InspectorView inspectorView;
-
-    @override
     Offset operator +(Offset other) => Offset(_position.dx + other.dx, _position.dy + other.dy);
     Offset operator -(Offset other) => Offset(_position.dx - other.dx, _position.dy - other.dy);
+
+    @override
+    bool selected;
+
+    @override
+    late EditorView editorView;
+
+    @override
+    late InspectorView inspectorView;
 
     @override
     Offset get center => _position;
@@ -108,7 +106,7 @@ class Node extends EditorElement {
     Offset get position => _position;
 
     @override
-    void set position(Offset p) => _position = p;
+    set position(Offset p) => _position = p;
 
     @override
     double get length => 0;
@@ -124,7 +122,7 @@ class Node extends EditorElement {
             json['forceY'] as double,
         );
 
-        NodeFixator fixator = NodeFixator.values.firstWhere((e) => e.toString() == 'NodeFixator.' + json['fixator'] as String);
+        NodeFixator fixator = NodeFixator.values.firstWhere((e) => e.toString() == "NodeFixator.${json['fixator']}");
 
         return Node(
             json['positionX'] as double,
@@ -144,7 +142,7 @@ class Node extends EditorElement {
 }
 
 
-class NodeEditorView extends EditorView {
+class NodeEditorView implements EditorView {
     NodeEditorView(this.editorElement, {
         this.radius = 10,
         this.fixatorRadius = 15,
@@ -152,6 +150,7 @@ class NodeEditorView extends EditorView {
         this.forceLabelFontSize = 12,
     });
 
+    @override
     final editorElement;
 
     final double radius;
@@ -188,7 +187,7 @@ class NodeEditorView extends EditorView {
             final Offset yTrianglePoint = yArrowEnd + Offset(triangleRadius, 0) * flipY;
             final Offset xTrianglePoint = xArrowEnd + Offset(triangleRadius, 0) * flipX;
 
-            final Offset forceLabelOffset = Offset(0, -15);
+            const Offset forceLabelOffset = Offset(0, -15);
 
             painter.setPaint(color: purpleColor.color, width: arrowWidth);
 
@@ -244,7 +243,7 @@ class NodeEditorView extends EditorView {
                 text: '${editorElement.force.dx.toStringAsFixed(2)}',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
-                bgColor: Color(0x00ffffff),
+                bgColor: const Color(0x00ffffff),
                 textOffset: window.worldToScreen(a) - forceLabelOffset,
                 outline: true,
                 outlineSize: 1.25,
@@ -260,7 +259,7 @@ class NodeEditorView extends EditorView {
     }
 
     @override
-    bool? click(Window window, Offset mouseWorldClick) {
+    bool click(Window window, Offset mouseWorldClick) {
         editorElement.selected = Rect.fromCircle(
             center: editorElement.position,
             radius: radius,
@@ -270,7 +269,7 @@ class NodeEditorView extends EditorView {
     }
 
     @override
-    bool? boxSelect(BoxSelection selection) {
+    bool boxSelect(BoxSelection selection) {
         editorElement.selected = isPointInRect(editorElement.center, selection.start, selection.end);
         return editorElement.selected;
     }
@@ -280,7 +279,7 @@ class NodeEditorView extends EditorView {
 }
 
 
-class Beam extends EditorElement {
+class Beam implements EditorElement {
     Beam({
         required this.start,
         required this.end,
@@ -306,9 +305,22 @@ class Beam extends EditorElement {
     double tension;
     BeamSection section;
 
+
+    double get rotation { 
+        final delta = Offset(end.position.dx - start.position.dx, end.position.dy - start.position.dy);
+        return atan(delta.dy / delta.dx);
+    }
+
+    @override
+    double get length => Offset(start.position.dx - end.position.dx, start.position.dy - end.position.dy).distance;
+
+    @override
     bool selected;
 
+    @override
     late EditorView editorView;
+
+    @override
     late InspectorView inspectorView;
 
     @override
@@ -318,29 +330,15 @@ class Beam extends EditorElement {
     Offset get position => center;
 
     @override
-    void set position(Offset value) {
+    set position(Offset value) {
         final offset = center - value;
         start.position -= offset;
         end.position -= offset;
     }
 
     @override
-    double get length => Offset(start.position.dx - end.position.dx, start.position.dy - end.position.dy).distance;
-
-    double get rotation { 
-        final delta = Offset(end.position.dx - start.position.dx, end.position.dy - start.position.dy);
-        return atan(delta.dy / delta.dx);
-    }
-
-    @override
     List<Node> getElementNodes() {
         return [start, end];
-    }
-
-    @override
-    void moveByDelta(Offset delta) { 
-        start.position -= delta;
-        end.position -= delta;
     }
 
     factory Beam.fromJson(dynamic json, List<Node> nodes) {
@@ -374,13 +372,14 @@ class Beam extends EditorElement {
 }
 
 
-class BeamEditorView extends EditorView {
+class BeamEditorView implements EditorView {
     BeamEditorView(this.editorElement, {
         this.centerCrossLength = 7,
         this.forceLabelOffset = 17,
         this.forceLabelFontSize = 12,
     });
 
+    @override
     final editorElement;
 
     late Offset a, b, c, d;
@@ -456,7 +455,7 @@ class BeamEditorView extends EditorView {
                 text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
-                bgColor: Color(0x00ffffff),
+                bgColor: const Color(0x00ffffff),
                 textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
                 outline: true,
                 outlineSize: 1.25,
@@ -469,14 +468,14 @@ class BeamEditorView extends EditorView {
     }
 
     @override
-    bool? click(Window window, Offset mouseWorldClick) {
+    bool click(Window window, Offset mouseWorldClick) {
         refreshCanvasData();
         editorElement.selected = isPointInQuad(mouseWorldClick, a, b, c, d);
         return editorElement.selected;
     }
 
     @override
-    bool? boxSelect(BoxSelection selection) {
+    bool boxSelect(BoxSelection selection) {
         editorElement.selected = isPointInRect(editorElement.start.center, selection.start, selection.end) &&
                                  isPointInRect(editorElement.end.center, selection.start, selection.end);
         return editorElement.selected;
@@ -514,46 +513,33 @@ abstract class EditorSelectionState {
 }
 
 
-class EditorInitialSelectionState extends EditorSelectionState {
-    EditorInitialSelectionState(Editor editor);
-    @override
-    void processInput(Editor editor, Window window, Input input) {}
-
-    @override
-    void drawBoxSelection(Window window, Painter painter, Input input) {}
-}
-
-
-class EditorProcessSelectionState extends EditorSelectionState {
-    EditorProcessSelectionState(Editor editor) {
+class EditorInitialSelectionState implements EditorSelectionState {
+    EditorInitialSelectionState(Editor editor) {
         for(final e in editor.elements) {
             e.selected = false;
         }
     }
     @override
     void processInput(Editor editor, Window window, Input input) {
-        if (!editor.selectedElements.isEmpty && (!input.isLMBDown)) {
+        if (editor.selectedElements.isNotEmpty && (!input.isLMBDown)) {
             editor.changeSelectionState(EditorDoneSelectionState(editor));
         }
 
         editor.selectedElements = [];
         final start = input.boxSelectionWorld.start;
         final end = input.boxSelectionWorld.end;
-        final list = editor.bar.isBeamSelectionMode ? editor.beams : editor.nodes;
+        final list = editor.isBeamSelectionMode ? editor.beams : editor.nodes;
 
         if (start != end) {
             for (final c in list) {
                 final select = c.editorView.boxSelect(input.boxSelectionWorld);
-                if (select != null) {
-                    if (select) {
-                        editor.selectedElements.add(c);
-                    }        
-                }
+                if (select) {
+                    editor.selectedElements.add(c);
+                }        
             }   
         } else {
             for (final c in list.reversed.toList()) {
-                final click = c.editorView.click(window, input.lMBWorldClick);
-                if (click != null && click) {
+                if (c.editorView.click(window, input.lMBWorldClick)) {
                     if (editor.selectedElements.isEmpty) {
                         editor.selectedElements.add(c);
                     } else {
@@ -585,7 +571,7 @@ class EditorProcessSelectionState extends EditorSelectionState {
 }
 
 
-class EditorDoneSelectionState extends EditorSelectionState {
+class EditorDoneSelectionState implements EditorSelectionState {
     EditorDoneSelectionState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {
@@ -595,9 +581,9 @@ class EditorDoneSelectionState extends EditorSelectionState {
         ).contains(input.mousePosWorld);
 
         if (input.isLMBDown && mouseInDragBox) {
-            editor.changeSelectionState(EditorDragSelectionState(editor));
+            editor.changeSelectionState(EditorInitialSelectedState(editor));
         } else if (input.isLMBDown && !mouseInDragBox) {
-            editor.changeSelectionState(EditorProcessSelectionState(editor));
+            editor.changeSelectionState(EditorInitialSelectionState(editor));
         }
     }
 
@@ -606,8 +592,8 @@ class EditorDoneSelectionState extends EditorSelectionState {
 }
 
 
-class EditorDragSelectionState extends EditorSelectionState {
-    EditorDragSelectionState(Editor editor);
+class EditorInitialSelectedState implements EditorSelectionState {
+    EditorInitialSelectedState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {
         if (!input.isLMBDown) {
@@ -637,18 +623,33 @@ class Editor {
         this.selectedElements = const [],
         this.dragBoxPosition = Offset.infinite,
         this.dragBoxRadius = 10,
+        this.elementsUIVisible = true,
+        this.showCalcOverlay = false,
     }) {
-        loadElementsFromFile.call();
-        bar = EditorBar(this);
-        selectionState = EditorProcessSelectionState(this);
+        openFile();
+        selectionState = EditorInitialSelectionState(this);
     }
 
+    List<EditorElement> elements = [];
+    List<EditorElement> selectedElements;
+
+    Offset dragBoxPosition;
+    late double dragBoxRadius;
+
+    Grid grid = Grid();
+
+    bool isBeamSelectionMode = true;
+    bool elementsUIVisible;
+    bool showCalcOverlay;
+    late EditorSelectionState selectionState;
+
+    FocusNode focus = FocusNode();
 
     String elementsToJson() {
         String nodesToJson = jsonEncode(nodes);
         String beamsToJson = jsonEncode(beams);
 
-        String jsonEditorElements = "{\"nodes\":${nodesToJson},\"beams\":${beamsToJson}}";
+        String jsonEditorElements = "{\"nodes\":$nodesToJson,\"beams\":$beamsToJson}";
         return jsonEditorElements;
     }
 
@@ -663,15 +664,19 @@ class Editor {
         elements = List.from(beams)..addAll(nodes);
     }
 
-    void loadElementsFromFile() async {
+    void _loadElementsFromFile() async {
         try {
             final file = await _localFile;
             final contents = await file.readAsString();
 
             jsonStringToElements(contents);
         } catch (e) {
-            print(e);
+            // TODO
         }
+    }
+
+    void openFile() {
+        _loadElementsFromFile.call();
     }
 
     Future<String> get _localPath async {
@@ -681,16 +686,13 @@ class Editor {
 
     Future<File> get _localFile async {
         final path = await _localPath;
-        return File('$path/cad_data.txt');
+        return File('$path/cad_data.json');
     }
 
     Future<File> writeElementsToFile() async {
         final file = await _localFile;
         return file.writeAsString(elementsToJson());
     }
-
-    List<EditorElement> elements = [];
-    List<EditorElement> selectedElements;
 
     List<Node> get nodes {
         List<Node> list = [];
@@ -724,19 +726,8 @@ class Editor {
         return list;
     }
 
-    Offset dragBoxPosition;
-    late double dragBoxRadius;
-
-    Grid grid = Grid();
-
-    late EditorSelectionState selectionState;
-
-    late EditorBar bar;
-
-    FocusNode focus = FocusNode();
-
     void resetSelectionState() {
-        selectionState = EditorProcessSelectionState(this);
+        selectionState = EditorInitialSelectionState(this);
     }
 
     void changeSelectionState(EditorSelectionState state) {
@@ -822,7 +813,7 @@ class Editor {
     }
 
     void drawDragBox(Window window, Painter painter, Input input) {
-        if (!selectedElements.isEmpty) {
+        if (selectedElements.isNotEmpty) {
             dragBoxPosition = avgPoint(selectedElements.map((e) => e.center).toList());
             dragBoxRadius = 10 / window.zoom;
 
@@ -854,26 +845,26 @@ class Editor {
                 window,
                 window.worldToScreen(lt),
                 window.worldToScreen(lb),
-                dragBoxPositionScreen - Offset(triangleHeight, 0),
+                dragBoxPositionScreen - const Offset(triangleHeight, 0),
             );
             painter.drawTriangle(
                 window,
                 window.worldToScreen(rt),
                 window.worldToScreen(rb),
-                dragBoxPositionScreen + Offset(triangleHeight, 0),
+                dragBoxPositionScreen + const Offset(triangleHeight, 0),
             );
             painter.setPaint(color: cianColor.lighter(triangleLight).withOpacity(triangleOpacity), width: 1);
             painter.drawTriangle(
                 window,
                 window.worldToScreen(lt),
                 window.worldToScreen(rt),
-                dragBoxPositionScreen - Offset(0, triangleHeight),
+                dragBoxPositionScreen - const Offset(0, triangleHeight),
             );
             painter.drawTriangle(
                 window,
                 window.worldToScreen(lb),
                 window.worldToScreen(rb),
-                dragBoxPositionScreen + Offset(0, triangleHeight),
+                dragBoxPositionScreen + const Offset(0, triangleHeight),
             );
         }
     }
@@ -887,7 +878,7 @@ class Editor {
     void render(Window window, Painter painter, Input input) {
         grid.render(window, painter);
         drawEditorElements(window, painter);
-        if (bar.elementsUIVisible) drawEditorElementsUI(window, painter);
+        if (elementsUIVisible) drawEditorElementsUI(window, painter);
         selectionState.drawBoxSelection(window, painter, input);
         drawDragBox(window, painter, input);
     }
@@ -896,11 +887,11 @@ class Editor {
 
 class Grid {
     void draw(Window window, Painter painter) {
-        final double depth = 1;
-        final double step = 5 * depth;
-        final double gridSteps = 5;
-        final double border = 20;
-        final double depthStep = window.zoom;
+        const double depth = 1;
+        const double step = 5 * depth;
+        const double gridSteps = 5;
+        const double border = 20;
+        //final double depthStep = window.zoom; TODO: write an infinity zoom for grid
         final double borderHeight = window.height - 1.1 * border;
         final double borderWidth = window.width - 1.5 * border;
 
@@ -969,20 +960,14 @@ class Grid {
 
 
 class EditorBar extends StatefulWidget {
-    EditorBar(this.editor);
+    EditorBar(this.editor, {
+        required this.width,
+        required this.height,
+    });
 
-    Editor editor;
-    List<bool> _selectionMode = [true, false];
-    List<bool> _hideElementsUI = [true];
-
-    bool get isBeamSelectionMode => _selectionMode[0];
-    bool get isNodeSelectionMode => _selectionMode[1];
-
-    bool get elementsUIVisible => _hideElementsUI[0];
-
-    void unselectAllElements() {
-        editor.resetSelectionState();
-    }
+    final Editor editor;
+    final double width;
+    final double height;
 
     @override
     State<EditorBar> createState() => _EditorBarState();
@@ -990,9 +975,21 @@ class EditorBar extends StatefulWidget {
 
 
 class _EditorBarState extends State<EditorBar> {
+    List<bool> _selectionMode = [true, false];
+    List<bool> _hideElementsUI = [true];
+
+    bool get _isBeamSelectionMode => _selectionMode[0];
+    bool get _elementsUIVisible => _hideElementsUI[0];
+
+    void _unselectAllElements() {
+        widget.editor.resetSelectionState();
+    }
+
     @override
     Widget build(BuildContext context) {
         return Container(
+            width: widget.width,
+            height: widget.height,
             color: purpleColor.lighter(0.925),
             padding: const EdgeInsets.all(5.0),
             child: Row(
@@ -1005,10 +1002,11 @@ class _EditorBarState extends State<EditorBar> {
                             ToggleButtons(
                                 onPressed: (int index) {
                                     setState(() {
-                                        widget.unselectAllElements();
-                                        for (int i = 0; i < widget._selectionMode.length; i++) {
-                                            widget._selectionMode[i] = i == index;
+                                        _unselectAllElements();
+                                        for (int i = 0; i < _selectionMode.length; i++) {
+                                            _selectionMode[i] = i == index;
                                         }
+                                        widget.editor.isBeamSelectionMode = _selectionMode[0];
                                     });
                                 },
                                 borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -1018,99 +1016,72 @@ class _EditorBarState extends State<EditorBar> {
                                 disabledColor: Colors.white,
                                 fillColor: cianColor.darker(0.2),
                                 color: cianColor.darker(0.2),
-                                isSelected: widget._selectionMode,
+                                isSelected: _selectionMode,
                                 children: selectionModeIcons,
                             ),
-                            SizedBox(width: 24),
-                            /*
-                            ToggleButtons(
-                                onPressed: (int _) {
-                                    setState(() {
-                                        widget._hideElementsUI[0] = !widget._hideElementsUI[0];
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: widget._hideElementsUI,
-                                children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
-                            ),
-                            */
                         ],
                     ),
-                    ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Stack(
-                            children: <Widget>[
-                                Positioned.fill(
-                                    child: Container(
-                                        decoration: const BoxDecoration(
-                                            gradient: LinearGradient(
-                                                colors: <Color>[
-                                                    Color(0xFF0D47A1),
-                                                    Color(0xFF1976D2),
-                                                    Color(0xFF42A5F5),
-                                                ],
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                                TextButton(
-                                    style: TextButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.all(16.0),
-                                        textStyle: const TextStyle(fontSize: 20),
-                                    ),
-                                    onPressed: () {
-                                        Calculation calc = Calculation();
-                                        var delta = calc.getDelta(widget.editor.beams);
-                                    },
-                                    child: const Text('Чиназес'),
-                                ),
-                            ],
+
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: pinkColor.darker(0.0),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(16.0),
+                            textStyle: const TextStyle(fontSize: 20),
                         ),
+                        onPressed: () {
+                            Calculation calc = Calculation();
+                            widget.editor.showCalcOverlay = calc.isElementsValid(widget.editor.beams);
+                        },
+                        child: const Text('Delta'),
                     ),
-                    ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Stack(
-                            children: <Widget>[
-                                Positioned.fill(
-                                    child: Container(
-                                        decoration: const BoxDecoration(
-                                            gradient: LinearGradient(
-                                                colors: <Color>[
-                                                    Color(0xFF0D47A1),
-                                                    Color(0xFF1976D2),
-                                                    Color(0xFF42A5F5),
-                                                ],
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                                TextButton(
-                                    style: TextButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.all(16.0),
-                                        textStyle: const TextStyle(fontSize: 20),
-                                    ),
-                                    onPressed: () {
-                                        widget.editor.writeElementsToFile();
-                                    },
-                                    child: const Text('Сохранить'),
-                                ),
-                            ],
+
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: purpleColor.darker(0.0),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(16.0),
+                            textStyle: const TextStyle(fontSize: 20),
                         ),
+                        onPressed: () {
+                            widget.editor.openFile();
+                        },
+                        child: const Text('Open'),
                     ),
+
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: purpleColor.darker(0.0),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(16.0),
+                            textStyle: const TextStyle(fontSize: 20),
+                        ),
+                        onPressed: () {
+                            widget.editor.writeElementsToFile();
+                        },
+                        child: const Text('Save'),
+                    ),
+
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: purpleColor.darker(0.0),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(16.0),
+                            textStyle: const TextStyle(fontSize: 20),
+                        ),
+                        onPressed: () {
+                            widget.editor.writeElementsToFile();
+                        },
+                        child: const Text('Save as'),
+                    ),
+
                     Row(
                         children: [
                             ToggleButtons(
                                 onPressed: (int _) {
                                     setState(() {
-                                        widget._hideElementsUI[0] = !widget._hideElementsUI[0];
+                                        _hideElementsUI[0] = !_hideElementsUI[0];
+                                        widget.editor.elementsUIVisible = !widget.editor.elementsUIVisible;
                                     });
                                 },
                                 borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -1120,8 +1091,8 @@ class _EditorBarState extends State<EditorBar> {
                                 disabledColor: Colors.white,
                                 fillColor: cianColor.darker(0.2),
                                 color: cianColor.darker(0.2),
-                                isSelected: widget._hideElementsUI,
-                                children: widget._hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                                isSelected: _hideElementsUI,
+                                children: _hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
                             ),
                         ],
                     ),
@@ -1133,10 +1104,17 @@ class _EditorBarState extends State<EditorBar> {
 
 
 class EditorOperationsBar extends StatefulWidget {
-    EditorOperationsBar(this.editor, this.window);
+    EditorOperationsBar(
+        this.editor,
+        this.window, {
+        required this.width,
+        required this.height,
+    });
 
-    Editor editor;
-    Window window;
+    final Editor editor;
+    final Window window;
+    final double width;
+    final double height;
 
     @override
     State<EditorOperationsBar> createState() => _EditorOperationsBarState();
@@ -1155,6 +1133,8 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
         }
         _visible = !widget.editor.selectedElements.isEmpty;
         return Container(
+            width: widget.width,
+            height: widget.height,
             padding: const EdgeInsets.all(5.0),
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1166,7 +1146,7 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                            widget.editor.bar.isNodeSelectionMode ? MaterialButton(
+                            !widget.editor.isBeamSelectionMode ? MaterialButton(
                                 height: 55,
                                 minWidth: 40,
                                 onPressed: () {
@@ -1182,17 +1162,17 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                    CadIcons.addPlus,
                                    size: 32,
                                 ),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
                             ) : SizedBox.shrink(),
                             SizedBox(width: 20),
-                            widget.editor.bar.isNodeSelectionMode ? MaterialButton(
+                            !widget.editor.isBeamSelectionMode && widget.editor.selectedElements.length >= 2 ? MaterialButton(
                                 height: 55,
                                 minWidth: 40,
                                 onPressed: () {
                                     setState(() {
                                         widget.editor.makeBeamsBetweenSelectedNodes();
                                         _visible = false;
-                                        _changed = true;
+                                        _changed = true;                                        
                                     });
                                 },
                                 color: cianColor.darker(0.2),
@@ -1201,9 +1181,9 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                    CadIcons.cheese,
                                    size: 32,
                                 ),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
                             ) : SizedBox.shrink(),
-                            widget.editor.bar.isNodeSelectionMode ? SizedBox(width: 20) : SizedBox.shrink(),
+                            !widget.editor.isBeamSelectionMode ? SizedBox(width: 20) : SizedBox.shrink(),
                             _visible ? MaterialButton(
                                 height: 55,
                                 minWidth: 40,
@@ -1220,7 +1200,7 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                    CadIcons.delete,
                                    size: 32,
                                 ),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
                             ) : SizedBox.shrink(),
                         ],
                     ),
@@ -1230,15 +1210,73 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
     }
 }
 
+class CalculationOverlay extends StatefulWidget {
+    CalculationOverlay(
+        this.editor, {
+        required this.width,
+        required this.height,
+        this.title = "Calculation results",
+
+    });
+
+    final Editor editor;
+    final String title;
+    final double width;
+    final double height;
+
+    @override
+    State<CalculationOverlay> createState() => _CalculationOverlayState();
+}
+
+class _CalculationOverlayState extends State<CalculationOverlay> {
+    final Calculation calc = Calculation();
+
+    String get _deltas {
+        final List<double>? deltas = calc.getDeltas(widget.editor.beams);
+        return deltas != null ? deltas.toString() : "";
+    }
+
+    @override
+    Widget build(BuildContext context) {
+        if (!widget.editor.showCalcOverlay) return SizedBox.shrink();
+        return Container(
+            width: widget.width,
+            height: widget.height,
+            alignment: Alignment.center,
+            color: Colors.white,
+            child: Column(
+                //mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                    Container(
+                        alignment: Alignment.centerRight,
+                        child: MaterialButton(
+                            height: 55,
+                            minWidth: 40,
+                            onPressed: () {
+                                setState(() {
+                                    widget.editor.showCalcOverlay = false;
+                                });
+                            },
+                            color: pinkColor.darker(0.2),
+                            textColor: Colors.white,
+                            child: const Icon(
+                               CadIcons.delete,
+                               size: 32,
+                            ),
+                            shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
+                        ),
+                    ),
+                    Text(widget.title),
+                    Text(_deltas),
+                ],
+            ),
+        );
+    }
+}
+
+
 class Calculation {
     double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;
-    Array2d q(Beam beam) {
-        final double value = -(beam.start.force.dx * beam.length) / 2;
-        return Array2d([
-            Array([value]),
-            Array([value]),
-        ]);
-    }
 
     Array2d _getMatrixA(List<Beam> beams) {
         final int beamsLength = beams.length;
@@ -1249,6 +1287,7 @@ class Calculation {
         matrix.add(firstLine);
 
         for (int i = 1; i < beamsLength; i++) {
+            print("${beams[i].elasticity}, ${beams[i].sectionArea}, ${beams[i].length}");
             final line = Array(List.from(List<double>.filled(i - 1, 0.0))
                 ..addAll([-k(beams[i - 1]), k(beams[i - 1]) + k(beams[i]), -k(beams[i])])
                 ..addAll(List<double>.filled(beamsLength - i - 1, 0.0)));
@@ -1259,31 +1298,60 @@ class Calculation {
             ..addAll([-k(beams[beamsLength - 1]), k(beams[beamsLength - 1])]));
         matrix.add(lastLine);
 
+        if (beams.first.start.fixator != NodeFixator.disabled) {
+            matrix[0][0] = 1;
+            matrix[0][1] = 0;
+            matrix[1][0] = 0;
+        }
+        if (beams.last.end.fixator != NodeFixator.disabled) {
+            matrix[beamsLength][beamsLength] = 1;
+            matrix[beamsLength - 1][beamsLength] = 0;
+            matrix[beamsLength][beamsLength - 1] = 0;
+        }
+
         print(matrix);
 
         return matrix;
     }
 
+    double q(double q, double l) => -(q * l) / 2;
     Array2d _getMatrixB(List<Beam> beams) {
         final int beamsLength = beams.length;
         var matrix = Array2d.empty();
 
-        matrix.add(beams.first.start.fixator == NodeFixator.disabled ? Array([-q(beams.first)[0][0] + beams.first.force.dx]) : Array([0.0]));
+        matrix.add(beams.first.start.fixator == NodeFixator.disabled ?
+            Array([-q(beams.first.force.dx, beams.first.length) - beams.first.start.force.dx])
+            : Array([0.0]));
         for (int i = 1; i < beamsLength; i++) {
-            matrix.add(Array([-q(beams[i-1])[0][0] - q(beams[i])[0][0] + beams[i].force.dx]));
+            matrix.add(Array([-q(beams[i - 1].force.dx, beams[i - 1].length) - q(beams[i].force.dx, beams[i].length) + beams[i].start.force.dx]));
         }
-        matrix.add(beams.last.end.fixator == NodeFixator.disabled ? Array([-q(beams.last)[0][0] + beams.last.force.dx]) : Array([0.0]));
+        matrix.add(beams.last.end.fixator == NodeFixator.disabled ?
+            Array([-q(beams.last.force.dx, beams.last.length) - beams.last.start.force.dx])
+            : Array([0.0]));
 
+        print("B matrix:");
         print(matrix);
-
         return matrix;
     }
 
-    Array2d getDelta(List<Beam> beams) {
-        final a = _getMatrixA(beams);
-        final b = _getMatrixB(beams);
-        final delta = matrixSolve(a, b);
-        print(delta);
-        return delta;
+    List<double>? getDeltas(List<Beam> beams) {
+        try {
+            final List<Beam> newBeams = List.from(beams.reversed);
+            final a = _getMatrixA(newBeams);
+            final b = _getMatrixB(newBeams);
+            final deltas = matrixSolve(a, b).getColumn(0);
+            print(deltas);
+            return deltas != null ? deltas.toList() : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    bool isElementsValid(List<Beam> beams) {
+        if (beams.isNotEmpty) { return true; }
+        for (final b in beams) {
+            if (b.start.fixator != NodeFixator.disabled || b.end.fixator != NodeFixator.disabled) { return true; }
+        }
+        return false;
     }
 }
