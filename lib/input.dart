@@ -113,7 +113,7 @@ class Input {
 
     void handlePointerScroll(Window window, PointerScrollEvent event) {
         if (window.zoom >= window.zoomMin) {
-            final zoomDelta = -event.scrollDelta.dy * _mouseSensitivity * window.zoom.abs();
+            final zoomDelta = -event.scrollDelta.dy * _mouseSensitivity * window.zoom;
             window.zoom += zoomDelta;
             window.zoom = window.zoom.clamp(window.zoomMin, window.zoomMax).toDouble();
             if (window.zoom != window.zoomMin && window.zoom != window.zoomMax) {
