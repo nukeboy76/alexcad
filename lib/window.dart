@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 class Window {
     Window({
         this.zoom = 20,
-        this.pan = const Offset(500, 500),
-        this.zoomMin = 5,
-        this.zoomMax = 40,
+        this.pan = const Offset(250, 250),
+        this.zoomMin = 10,
+        this.zoomMax = 100,
     });
 
     late Canvas canvas;

@@ -1,11 +1,11 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:scidart/numdart.dart';
 
 import 'cad_colors.dart';
@@ -87,6 +87,8 @@ class Node implements EditorElement {
     double torqueForce;
     NodeFixator fixator;
 
+    static void resetNodeIndex() => globalIndex = 0;
+
     Offset operator +(Offset other) => Offset(_position.dx + other.dx, _position.dy + other.dy);
     Offset operator -(Offset other) => Offset(_position.dx - other.dx, _position.dy - other.dy);
 
@@ -143,36 +145,14 @@ class Node implements EditorElement {
 
 
 class NodeEditorView implements EditorView {
-    NodeEditorView(this.editorElement, {
-        this.radius = 10,
-        this.fixatorRadius = 15,
-        this.forceLabelOffset = 17,
-        this.forceLabelFontSize = 12,
-    });
+    NodeEditorView(this.editorElement);
+    static const double radius = 10;
+    static const double fixatorRadius = 15;
+    static const double forceLabelOffset = 17;
+    static const double forceLabelFontSize = 16;
 
     @override
     final editorElement;
-
-    final double radius;
-    final double fixatorRadius;
-    final double forceLabelOffset;
-    final double forceLabelFontSize;
-
-    @override
-    void render(Window window, Painter painter) {
-        if (editorElement.fixator != NodeFixator.disabled) {
-            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade400);
-            painter.drawRect(
-                window,
-                Rect.fromCircle(
-                    center: window.worldToScreen(editorElement.center),
-                    radius: fixatorRadius,
-                ),
-            );
-        }
-        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.3) : Colors.grey);
-        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
-    }
 
     void drawForceArrows(Window window, Painter painter) {
         if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
@@ -254,6 +234,22 @@ class NodeEditorView implements EditorView {
     }
 
     @override
+    void render(Window window, Painter painter) {
+        if (editorElement.fixator != NodeFixator.disabled) {
+            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade400);
+            painter.drawRect(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(editorElement.center),
+                    radius: fixatorRadius,
+                ),
+            );
+        }
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.3) : Colors.grey);
+        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
+    }
+
+    @override
     void renderUI(Window window, Painter painter) {
         drawForceArrows(window, painter);
     }
@@ -284,7 +280,7 @@ class Beam implements EditorElement {
         required this.start,
         required this.end,
         this.force = const Offset(0, 0),
-        this.width = 1,
+        //this.width = 1,
         this.sectionArea = 1,
         this.elasticity = 1,
         this.tension = 1,
@@ -299,7 +295,7 @@ class Beam implements EditorElement {
     Node end;
 
     Offset force;
-    double width;
+    //double width;
     double sectionArea;
     double elasticity;
     double tension;
@@ -360,7 +356,10 @@ class Beam implements EditorElement {
         );
     }
 
-    Map toJson() => {
+    Map toJson() {
+        print(start.index);
+        print(end.index);
+    return {
         'startI': start.index,
         'endI': end.index,
         'forceX': force.dx,
@@ -368,24 +367,21 @@ class Beam implements EditorElement {
         'sectionArea': sectionArea,
         'elasticity': elasticity,
         'tension': tension,
-    };
+    };}
 }
 
 
 class BeamEditorView implements EditorView {
-    BeamEditorView(this.editorElement, {
-        this.centerCrossLength = 7,
-        this.forceLabelOffset = 17,
-        this.forceLabelFontSize = 12,
-    });
+    BeamEditorView(this.editorElement);
+
+    static const double centerCrossLength = 7;
+    static const double forceLabelOffset = 25;
+    static const double forceLabelFontSize = 16;
 
     @override
     final editorElement;
 
     late Offset a, b, c, d;
-    final double centerCrossLength;
-    final double forceLabelOffset;
-    final double forceLabelFontSize;
 
     @override
     void render(Window window, Painter painter) {
@@ -485,22 +481,22 @@ class BeamEditorView implements EditorView {
     void refreshCanvasData() {
         a = rotatePoint(
             editorElement.start.position,
-            Offset(editorElement.start.position.dx, editorElement.start.position.dy + editorElement.width / 2),
+            Offset(editorElement.start.position.dx, editorElement.start.position.dy + editorElement.sectionArea / 2),
             editorElement.rotation,
         );
         b = rotatePoint(
             editorElement.start.position,
-            Offset(editorElement.start.position.dx, editorElement.start.position.dy - editorElement.width / 2),
+            Offset(editorElement.start.position.dx, editorElement.start.position.dy - editorElement.sectionArea / 2),
             editorElement.rotation,
         );
         c = rotatePoint(
             editorElement.end.position,
-            Offset(editorElement.end.position.dx, editorElement.end.position.dy + editorElement.width / 2),
+            Offset(editorElement.end.position.dx, editorElement.end.position.dy + editorElement.sectionArea / 2),
             editorElement.rotation,
         );
         d = rotatePoint(
             editorElement.end.position,
-            Offset(editorElement.end.position.dx, editorElement.end.position.dy - editorElement.width / 2),
+            Offset(editorElement.end.position.dx, editorElement.end.position.dy - editorElement.sectionArea / 2),
             editorElement.rotation,
         );
     }
@@ -626,7 +622,6 @@ class Editor {
         this.elementsUIVisible = true,
         this.showCalcOverlay = false,
     }) {
-        openFile();
         selectionState = EditorInitialSelectionState(this);
     }
 
@@ -644,55 +639,6 @@ class Editor {
     late EditorSelectionState selectionState;
 
     FocusNode focus = FocusNode();
-
-    String elementsToJson() {
-        String nodesToJson = jsonEncode(nodes);
-        String beamsToJson = jsonEncode(beams);
-
-        String jsonEditorElements = "{\"nodes\":$nodesToJson,\"beams\":$beamsToJson}";
-        return jsonEditorElements;
-    }
-
-    void jsonStringToElements(dynamic json) {
-        json = jsonDecode(json);
-        var nodesJson = json['nodes'] as List;
-        List<Node> nodes = nodesJson.map((node) => Node.fromJson(node)).toList();
-
-        var beamsJson = json['beams'] as List;
-        List<Beam> beams = beamsJson.map((beam) => Beam.fromJson(beam, nodes)).toList();
-
-        elements = List.from(beams)..addAll(nodes);
-    }
-
-    void _loadElementsFromFile() async {
-        try {
-            final file = await _localFile;
-            final contents = await file.readAsString();
-
-            jsonStringToElements(contents);
-        } catch (e) {
-            // TODO
-        }
-    }
-
-    void openFile() {
-        _loadElementsFromFile.call();
-    }
-
-    Future<String> get _localPath async {
-        final directory = await getApplicationDocumentsDirectory();
-        return directory.path;
-    }
-
-    Future<File> get _localFile async {
-        final path = await _localPath;
-        return File('$path/cad_data.json');
-    }
-
-    Future<File> writeElementsToFile() async {
-        final file = await _localFile;
-        return file.writeAsString(elementsToJson());
-    }
 
     List<Node> get nodes {
         List<Node> list = [];
@@ -740,11 +686,6 @@ class Editor {
             input.keyboardEventBuffer.removeLast();
             deleteSelectedElements();
         }
-
-        if (input.keyboardEventBuffer.last == LogicalKeyboardKey.keyS) {
-            input.keyboardEventBuffer.removeLast();
-            writeElementsToFile.call();
-        }
     }
 
     void makeBeamsBetweenSelectedNodes() {
@@ -757,7 +698,6 @@ class Editor {
                         Beam(
                             start: selectedNodes[i % l],
                             end: selectedNodes[j % l],
-                            width: 1,
                             section: BeamSection.round,
                         ),
                     );
@@ -887,22 +827,23 @@ class Editor {
 
 class Grid {
     void draw(Window window, Painter painter) {
+        /// TODO: write an infinity zoom for grid
+
         const double depth = 1;
         const double step = 5 * depth;
         const double gridSteps = 5;
         const double border = 20;
-        //final double depthStep = window.zoom; TODO: write an infinity zoom for grid
         final double borderHeight = window.height - 1.1 * border;
         final double borderWidth = window.width - 1.5 * border;
 
-        final centerStep = step * step * (window.zoom); //step * step * zoom;
+        final centerStep = step * step * (window.zoom);
 
-        const double panOffset = 2;
+        const double panOffset = 3;
         Offset screenPan = -window.size * panOffset + (window.size * panOffset) % centerStep + window.pan % centerStep;
 
         for (final direction in directions) {
             double count = 0;
-            for (Offset i = screenPan; count < window.height / window.zoom; i += direction * window.zoom * step) {
+            for (Offset i = screenPan; count < window.width / window.zoom; i += direction * window.zoom * step) {
                 count % gridSteps == 0 ? painter.setPaint(color: Colors.black, width: 1) :
                                     painter.setPaint(color: Colors.grey.shade400, width: 1);
                 painter.drawLine(window, Offset(i.dx, 0), Offset(i.dx, window.height));
@@ -961,13 +902,13 @@ class Grid {
 
 class EditorBar extends StatefulWidget {
     EditorBar(this.editor, {
-        required this.width,
-        required this.height,
+        this.width,
+        this.height,
     });
 
     final Editor editor;
-    final double width;
-    final double height;
+    final double? width;
+    final double? height;
 
     @override
     State<EditorBar> createState() => _EditorBarState();
@@ -990,14 +931,14 @@ class _EditorBarState extends State<EditorBar> {
         return Container(
             width: widget.width,
             height: widget.height,
-            color: purpleColor.lighter(0.925),
+            color: purpleColor.lighter(0.9),
             padding: const EdgeInsets.all(5.0),
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                    Row(
+                    Column(
                         children: [
                             ToggleButtons(
                                 onPressed: (int index) {
@@ -1036,46 +977,7 @@ class _EditorBarState extends State<EditorBar> {
                         child: const Text('Delta'),
                     ),
 
-                    TextButton(
-                        style: TextButton.styleFrom(
-                            backgroundColor: purpleColor.darker(0.0),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(16.0),
-                            textStyle: const TextStyle(fontSize: 20),
-                        ),
-                        onPressed: () {
-                            widget.editor.openFile();
-                        },
-                        child: const Text('Open'),
-                    ),
-
-                    TextButton(
-                        style: TextButton.styleFrom(
-                            backgroundColor: purpleColor.darker(0.0),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(16.0),
-                            textStyle: const TextStyle(fontSize: 20),
-                        ),
-                        onPressed: () {
-                            widget.editor.writeElementsToFile();
-                        },
-                        child: const Text('Save'),
-                    ),
-
-                    TextButton(
-                        style: TextButton.styleFrom(
-                            backgroundColor: purpleColor.darker(0.0),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(16.0),
-                            textStyle: const TextStyle(fontSize: 20),
-                        ),
-                        onPressed: () {
-                            widget.editor.writeElementsToFile();
-                        },
-                        child: const Text('Save as'),
-                    ),
-
-                    Row(
+                    Column(
                         children: [
                             ToggleButtons(
                                 onPressed: (int _) {
@@ -1107,14 +1009,14 @@ class EditorOperationsBar extends StatefulWidget {
     EditorOperationsBar(
         this.editor,
         this.window, {
-        required this.width,
-        required this.height,
+        this.width,
+        this.height,
     });
 
     final Editor editor;
     final Window window;
-    final double width;
-    final double height;
+    final double? width;
+    final double? height;
 
     @override
     State<EditorOperationsBar> createState() => _EditorOperationsBarState();
@@ -1122,6 +1024,14 @@ class EditorOperationsBar extends StatefulWidget {
 
 
 class _EditorOperationsBarState extends State<EditorOperationsBar> {
+    static const double buttonHeight = 55;
+    static const double minWidth = 40;
+    static const double darkness = 0.2;
+    static const double iconSize = 32;
+    static const double roundness = 8;
+    static const double padding = 5;
+    static const double spaceBetween = 20;
+
     bool _visible = true;
     bool _changed = true;
 
@@ -1132,10 +1042,11 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
             return Container();
         }
         _visible = !widget.editor.selectedElements.isEmpty;
+        final isBeamSelectionMode = widget.editor.isBeamSelectionMode;
         return Container(
             width: widget.width,
             height: widget.height,
-            padding: const EdgeInsets.all(5.0),
+            padding: const EdgeInsets.all(padding),
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1146,9 +1057,10 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                            !widget.editor.isBeamSelectionMode ? MaterialButton(
-                                height: 55,
-                                minWidth: 40,
+                            SizedBox(width: 47),
+                            !isBeamSelectionMode ? MaterialButton(
+                                height: buttonHeight,
+                                minWidth: minWidth,
                                 onPressed: () {
                                     setState(() {
                                         widget.editor.addNodeInCenter(widget.window.panWorld);
@@ -1156,18 +1068,18 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                         _changed = true;
                                     });
                                 },
-                                color: cianColor.darker(0.2),
+                                color: cianColor.darker(darkness),
                                 textColor: Colors.white,
                                 child: const Icon(
                                    CadIcons.addPlus,
-                                   size: 32,
+                                   size: iconSize,
                                 ),
-                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
+                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(roundness))),
                             ) : SizedBox.shrink(),
-                            SizedBox(width: 20),
-                            !widget.editor.isBeamSelectionMode && widget.editor.selectedElements.length >= 2 ? MaterialButton(
-                                height: 55,
-                                minWidth: 40,
+                            !isBeamSelectionMode && widget.editor.selectedElements.length >= 2 ? SizedBox(width: spaceBetween) : SizedBox.shrink(),
+                            !isBeamSelectionMode && widget.editor.selectedElements.length >= 2 ? MaterialButton(
+                                height: buttonHeight,
+                                minWidth: minWidth,
                                 onPressed: () {
                                     setState(() {
                                         widget.editor.makeBeamsBetweenSelectedNodes();
@@ -1175,18 +1087,18 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                         _changed = true;                                        
                                     });
                                 },
-                                color: cianColor.darker(0.2),
+                                color: cianColor.darker(darkness),
                                 textColor: Colors.white,
                                 child: const Icon(
                                    CadIcons.cheese,
-                                   size: 32,
+                                   size: iconSize,
                                 ),
-                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
+                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(roundness))),
                             ) : SizedBox.shrink(),
-                            !widget.editor.isBeamSelectionMode ? SizedBox(width: 20) : SizedBox.shrink(),
+                            !isBeamSelectionMode ? SizedBox(width: spaceBetween) : SizedBox.shrink(),
                             _visible ? MaterialButton(
-                                height: 55,
-                                minWidth: 40,
+                                height: buttonHeight,
+                                minWidth: minWidth,
                                 onPressed: () {
                                     setState(() {
                                         widget.editor.deleteSelectedElements();
@@ -1194,13 +1106,13 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                                         _changed = true;
                                     });
                                 },
-                                color: pinkColor.darker(0.2),
+                                color: pinkColor.darker(darkness),
                                 textColor: Colors.white,
                                 child: const Icon(
                                    CadIcons.delete,
-                                   size: 32,
+                                   size: iconSize,
                                 ),
-                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
+                                shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(roundness))),
                             ) : SizedBox.shrink(),
                         ],
                     ),
@@ -1213,22 +1125,28 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
 class CalculationOverlay extends StatefulWidget {
     CalculationOverlay(
         this.editor, {
-        required this.width,
-        required this.height,
+        this.width,
+        this.height,
         this.title = "Calculation results",
 
     });
 
     final Editor editor;
     final String title;
-    final double width;
-    final double height;
+    final double? width;
+    final double? height;
 
     @override
     State<CalculationOverlay> createState() => _CalculationOverlayState();
 }
 
 class _CalculationOverlayState extends State<CalculationOverlay> {
+    static const double buttonHeight = 55;
+    static const double minWidth = 40;
+    static const double darkness = 0.2;
+    static const double iconSize = 32;
+    static const double roundness = 8;
+
     final Calculation calc = Calculation();
 
     String get _deltas {
@@ -1239,6 +1157,7 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     @override
     Widget build(BuildContext context) {
         if (!widget.editor.showCalcOverlay) return SizedBox.shrink();
+
         return Container(
             width: widget.width,
             height: widget.height,
@@ -1249,25 +1168,28 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                 children: [
                     Container(
                         alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.all(5.0),
                         child: MaterialButton(
-                            height: 55,
-                            minWidth: 40,
+                            height: buttonHeight,
+                            minWidth: minWidth,
                             onPressed: () {
                                 setState(() {
                                     widget.editor.showCalcOverlay = false;
                                 });
                             },
-                            color: pinkColor.darker(0.2),
+                            color: pinkColor.darker(darkness),
                             textColor: Colors.white,
                             child: const Icon(
-                               CadIcons.delete,
-                               size: 32,
+                               CadIcons.cheese,
+                               size: iconSize,
                             ),
-                            shape: const RoundedRectangleBorder(borderRadius: const BorderRadius.all(const Radius.circular(8))),
+                            shape: const RoundedRectangleBorder(
+                                borderRadius: const BorderRadius.all(const Radius.circular(roundness)),
+                            ),
                         ),
                     ),
                     Text(widget.title),
-                    Text(_deltas),
+                    Text("Delta: $_deltas"),
                 ],
             ),
         );
@@ -1287,7 +1209,6 @@ class Calculation {
         matrix.add(firstLine);
 
         for (int i = 1; i < beamsLength; i++) {
-            print("${beams[i].elasticity}, ${beams[i].sectionArea}, ${beams[i].length}");
             final line = Array(List.from(List<double>.filled(i - 1, 0.0))
                 ..addAll([-k(beams[i - 1]), k(beams[i - 1]) + k(beams[i]), -k(beams[i])])
                 ..addAll(List<double>.filled(beamsLength - i - 1, 0.0)));
