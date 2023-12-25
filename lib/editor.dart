@@ -826,32 +826,7 @@ class Editor {
 
 
 class Grid {
-    void draw(Window window, Painter painter) {
-        /// TODO: write an infinity zoom for grid
-
-        const double depth = 1;
-        const double step = 5 * depth;
-        const double gridSteps = 5;
-        const double border = 20;
-        final double borderHeight = window.height - 1.1 * border;
-        final double borderWidth = window.width - 1.5 * border;
-
-        final centerStep = step * step * (window.zoom);
-
-        const double panOffset = 3;
-        Offset screenPan = -window.size * panOffset + (window.size * panOffset) % centerStep + window.pan % centerStep;
-
-        for (final direction in directions) {
-            double count = 0;
-            for (Offset i = screenPan; count < window.width / window.zoom; i += direction * window.zoom * step) {
-                count % gridSteps == 0 ? painter.setPaint(color: Colors.black, width: 1) :
-                                    painter.setPaint(color: Colors.grey.shade400, width: 1);
-                painter.drawLine(window, Offset(i.dx, 0), Offset(i.dx, window.height));
-                painter.drawLine(window, Offset(0, i.dy), Offset(window.width, i.dy));
-                count++;
-            }
-        }
-
+    void drawMainAxis(Window window, Painter painter) {
         painter.setPaint(color: cianColor.darker(0.2), width: 3);
         painter.drawLine(
             window,
@@ -865,31 +840,88 @@ class Grid {
             Offset(0, window.pan.dy),
             Offset(window.width, window.pan.dy),
         );
+    }
 
-        for (final direction in directions) {
-            final bool isVertical = (direction.dx == 0);
-            bool clamped = false;
-            double count = 0;
-            for (Offset i = screenPan; count < window.width / window.zoom; i += direction * window.zoom * step * step) {
-                final Offset textOffset = isVertical ? Offset(window.pan.dx.clamp(border, borderWidth), i.dy) :
-                                                       Offset(i.dx, window.pan.dy.clamp(border, borderHeight));
-                clamped = (textOffset.dx == border || textOffset.dy == border ||
-                           textOffset.dx == borderWidth || textOffset.dy == borderHeight);
-                final textValue = window.screenToWorld(i);
-                final String text = (isVertical ? textValue.dy.toStringAsFixed(0) : textValue.dx.toStringAsFixed(0));
-                if (text == "0" || text == "-0") continue;
+    void draw(Window window, Painter painter) {
+        /// TODO: write an infinity zoom for grid
+
+        const double depth = 1;
+        const double step = 5 * depth;
+        const double gridSteps = 5;
+        final double drawStopper = max(window.width, window.height);
+
+        /// Draw minor gridlines
+        final double minorStep = step * window.zoom;
+        Offset screenPan = window.pan % minorStep - Offset(minorStep, minorStep);
+
+        final Offset inc = Offset(1, 1) * minorStep;
+        painter.setPaint(color: Colors.grey, width: 1);
+        for (Offset i = screenPan; i < Offset(drawStopper, drawStopper); i += inc) {
+            painter.drawLine(window, Offset(i.dx, 0), Offset(i.dx, window.height));
+            painter.drawLine(window, Offset(0, i.dy), Offset(window.width, i.dy));
+        }
+
+        /// Draw major gridlines
+        final double majorStep = step * gridSteps * window.zoom;
+        screenPan = window.pan % majorStep;
+
+        final Offset inc2 = Offset(1, 1) * majorStep;
+        painter.setPaint(color: Colors.black, width: 1.5);
+        for (Offset i = screenPan; i.dx < drawStopper; i += inc2) {
+            painter.drawLine(window, Offset(i.dx, 0), Offset(i.dx, window.height));
+            painter.drawLine(window, Offset(0, i.dy), Offset(window.width, i.dy));
+        }
+
+        /// Draw main axis and text labels (coordinates)
+        const double border = 20;
+        final double borderHeight = window.height - 1.1 * border;
+        final double borderWidth = window.width - 1.5 * border;
+
+        final double offsetX = window.pan.dx.clamp(border, borderWidth);
+        final double offsetY = window.pan.dy.clamp(border, borderHeight);
+        final bool clampedX = (offsetX == border || offsetX == borderWidth);
+        final bool clampedY = (offsetY == border || offsetY == borderHeight);
+        final Color textColorX = clampedX ? Colors.grey.shade600 : Colors.black;
+        final Color textColorY = clampedY ? Colors.grey.shade600 : Colors.black;
+        final Color bgColorX = clampedX ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0);
+        final Color bgColorY = clampedY ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0);
+
+        drawMainAxis(window, painter);
+
+        for (Offset i = screenPan; i.dx < drawStopper; i += inc2) {
+            final Offset coord = window.screenToWorld(i);
+
+            final Offset textOffsetX = Offset(offsetX, i.dy);
+            final Offset textOffsetY = Offset(i.dx, offsetY);
+            final String textX = coord.dx.toStringAsFixed(0);
+            final String textY = coord.dy.toStringAsFixed(0);
+
+            if (!(textY == "0" || textY == "-0")) {
                 painter.drawText(
                     window: window,
-                    text: text,
+                    text: textY,
                     fontSize: 18,
-                    textColor: clamped ? Colors.grey.shade600 : Colors.black,
-                    bgColor: clamped ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0),
-                    outline: !clamped,
-                    textOffset: textOffset,
+                    textColor: textColorX,
+                    bgColor: bgColorX,
+                    outline: !clampedX,
+                    textOffset: textOffsetX,
                     centerAlignX: true,
                     centerAlignY: true,
                 );
-                count++;
+            }
+
+            if (!(textX == "0" || textX == "-0")) {
+                painter.drawText(
+                    window: window,
+                    text: textX,
+                    fontSize: 18,
+                    textColor: textColorY,
+                    bgColor: bgColorY,
+                    outline: !clampedY,
+                    textOffset: textOffsetY,
+                    centerAlignX: true,
+                    centerAlignY: true,
+                );
             }
         }
     }
