@@ -5,10 +5,10 @@ import 'package:flutter/services.dart';
 
 class Window {
     Window({
-        this.zoom = 100,
+        this.zoom = 20,
         this.pan = const Offset(250, 250),
-        this.zoomMin = 1,
-        this.zoomMax = 1000,
+        this.zoomMin = 0.00001,
+        this.zoomMax = 10000000,
     });
 
     late Canvas canvas;

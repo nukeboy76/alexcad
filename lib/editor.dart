@@ -843,12 +843,12 @@ class Grid {
     }
 
     void draw(Window window, Painter painter) {
-        /// TODO: write an infinity zoom for grid
-
-        const double depth = 1;
-        const double step = 5 * depth;
+        final double depthPower = floorToPowerOfTwo(window.zoom);
+        final double depth = 1 / depthPower;
+        final double step = 32 * depth;
         const double gridSteps = 5;
         final double drawStopper = max(window.width, window.height);
+        final int decimalLevel = (depthPower / 32).clamp(0, 6).toInt();
 
         /// Draw minor gridlines
         final double minorStep = step * window.zoom;
@@ -893,10 +893,10 @@ class Grid {
 
             final Offset textOffsetX = Offset(offsetX, i.dy);
             final Offset textOffsetY = Offset(i.dx, offsetY);
-            final String textX = coord.dx.toStringAsFixed(0);
-            final String textY = coord.dy.toStringAsFixed(0);
+            final String textX = coord.dx.toStringAsFixed(decimalLevel);
+            final String textY = coord.dy.toStringAsFixed(decimalLevel);
 
-            if (!(textY == "0" || textY == "-0")) {
+            if (coord.dy.abs() > 1e-9) {
                 painter.drawText(
                     window: window,
                     text: textY,
@@ -910,7 +910,7 @@ class Grid {
                 );
             }
 
-            if (!(textX == "0" || textX == "-0")) {
+            if (coord.dx.abs() > 1e-9) {
                 painter.drawText(
                     window: window,
                     text: textX,

@@ -1,14 +1,5 @@
-
 import 'dart:math';
 import 'package:flutter/material.dart';
-
-void rebuildAllChildren(BuildContext context) {
-    void rebuild(Element el) {
-        el.markNeedsBuild();
-        el.visitChildren(rebuild);
-    }
-    (context as Element).visitChildren(rebuild);
-}
 
 final List<Offset> directions = [
     const Offset(1, 0),
@@ -77,4 +68,15 @@ Offset lerpOffset(Offset a, Offset b, double t) {
 
 Offset avgPoint(List<Offset> points) {
     return points.reduce((a, b) => a + b) / points.length.toDouble();
+}
+
+double floorToPowerOfTwo(double value) {
+    bool inv = value >= 1;
+    int x = inv ? value.toInt() : (1 / value).toInt();
+
+    int t = 1 << 48;
+    while (x < t) { t >>= 1; }
+
+    double result = t.toDouble();
+    return inv ? result : 1 / result;
 }
