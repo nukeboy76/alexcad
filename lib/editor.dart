@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
@@ -385,9 +385,11 @@ class BeamEditorView implements EditorView {
 
     @override
     void render(Window window, Painter painter) {
-        final color = editorElement.selected ? cianColor.darker(0.3) : Colors.grey.shade700;
-        painter.setPaint(color: color);
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.3) : Colors.grey.shade700);
         painter.drawQuad(window, a, b, c, d);
+
+        painter.setPaintStroke(color: Colors.black, width: 3);
+        painter.drawQuadStroke(window, a, b, c, d);
     }
 
     void drawForceArrows(Window window, Painter painter) {
@@ -515,6 +517,7 @@ class EditorInitialSelectionState implements EditorSelectionState {
             e.selected = false;
         }
     }
+
     @override
     void processInput(Editor editor, Window window, Input input) {
         if (editor.selectedElements.isNotEmpty && (!input.isLMBDown)) {
@@ -568,7 +571,10 @@ class EditorInitialSelectionState implements EditorSelectionState {
 
 
 class EditorDoneSelectionState implements EditorSelectionState {
-    EditorDoneSelectionState(Editor editor);
+    EditorDoneSelectionState(Editor editor) {
+        Grid.drawFromBuffer = false;
+    }
+
     @override
     void processInput(Editor editor, Window window, Input input) {
         final mouseInDragBox = Rect.fromCircle(
@@ -577,7 +583,7 @@ class EditorDoneSelectionState implements EditorSelectionState {
         ).contains(input.mousePosWorld);
 
         if (input.isLMBDown && mouseInDragBox) {
-            editor.changeSelectionState(EditorInitialSelectedState(editor));
+            editor.changeSelectionState(EditorSelectedState(editor));
         } else if (input.isLMBDown && !mouseInDragBox) {
             editor.changeSelectionState(EditorInitialSelectionState(editor));
         }
@@ -588,8 +594,8 @@ class EditorDoneSelectionState implements EditorSelectionState {
 }
 
 
-class EditorInitialSelectedState implements EditorSelectionState {
-    EditorInitialSelectedState(Editor editor);
+class EditorSelectedState implements EditorSelectionState {
+    EditorSelectedState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {
         if (!input.isLMBDown) {
@@ -950,9 +956,14 @@ class EditorBar extends StatefulWidget {
 class _EditorBarState extends State<EditorBar> {
     List<bool> _selectionMode = [true, false];
     List<bool> _hideElementsUI = [true];
+    List<bool> _magnetToGrid = [true];
+
+    double _value = 1.0;
+    TextInputFormatter _formatter = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
 
     bool get _isBeamSelectionMode => _selectionMode[0];
     bool get _elementsUIVisible => _hideElementsUI[0];
+    bool get _isMagnetToGrid => _magnetToGrid[0];  
 
     void _unselectAllElements() {
         widget.editor.resetSelectionState();
@@ -1007,6 +1018,41 @@ class _EditorBarState extends State<EditorBar> {
                             widget.editor.showCalcOverlay = calc.isElementsValid(widget.editor.beams);
                         },
                         child: const Text('Delta'),
+                    ),
+
+                    Column(
+                        children: [
+                            ToggleButtons(
+                                onPressed: (int _) {
+                                    setState(() {
+                                        _magnetToGrid[0] = !_magnetToGrid[0];
+                                    });
+                                },
+                                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                selectedBorderColor: cianColor.darker(0.3),
+                                selectedColor: Colors.white,
+                                disabledBorderColor: Colors.white,
+                                disabledColor: Colors.white,
+                                fillColor: cianColor.darker(0.2),
+                                color: cianColor.darker(0.2),
+                                isSelected: _magnetToGrid,
+                                children: [Icon(CadIcons.snapToGrid, size: 32.0)],
+                            ),
+                        ],
+                    ),
+
+                    SizedBox(
+                        height: 60.0,
+                        width: 100,
+                        child: TextField(
+                            controller: TextEditingController(text: _value.toStringAsFixed(6)),
+                            //decoration: InputDecoration(labelText: "123"),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                                _formatter,
+                            ],
+                            onSubmitted: (value) => _value = double.parse(value),
+                        ),
                     ),
 
                     Column(

@@ -91,18 +91,25 @@ class Painter {
         window.canvas.drawPath(path, paint);
     }
 
-    void drawQuad(Window window, Offset a, Offset b, Offset c, Offset d) {
+    Path getQuadPath(Window window, Offset a, Offset b, Offset c, Offset d) {
         a = window.worldToScreen(a);
         b = window.worldToScreen(b);
         c = window.worldToScreen(c);
         d = window.worldToScreen(d);
-        var path = Path()
+        return Path()
             ..moveTo(a.dx, a.dy)
             ..lineTo(b.dx, b.dy)
             ..lineTo(d.dx, d.dy)
             ..lineTo(c.dx, c.dy)
             ..close();
-        window.canvas.drawPath(path, paint);
+    }
+
+    void drawQuad(Window window, Offset a, Offset b, Offset c, Offset d) {
+        window.canvas.drawPath(getQuadPath(window, a, b, c, d), paint);
+    }
+
+    void drawQuadStroke(Window window, Offset a, Offset b, Offset c, Offset d) {
+        window.canvas.drawPath(getQuadPath(window, a, b, c, d), paintStroke);
     }
 
     void drawRect(Window window, Rect rect) {

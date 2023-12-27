@@ -82,6 +82,7 @@ class Input {
             rMBWorldClick = window.screenToWorld(rMBDown);
         }
 
+
         /*
         if (event.buttons == 1) {
             lMBUp = event.position;
