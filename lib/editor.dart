@@ -521,15 +521,14 @@ class EditorInitialSelectionState implements EditorSelectionState {
     @override
     void processInput(Editor editor, Window window, Input input) {
         if (editor.selectedElements.isNotEmpty && (!input.isLMBDown)) {
-            editor.changeSelectionState(EditorDoneSelectionState(editor));
+            editor.changeSelectionState(EditorSelectionDoneState(editor));
         }
 
         editor.selectedElements = [];
-        final start = input.boxSelectionWorld.start;
-        final end = input.boxSelectionWorld.end;
+        final BoxSelection selection = input.boxSelectionWorld;
         final list = editor.isBeamSelectionMode ? editor.beams : editor.nodes;
 
-        if (start != end) {
+        if (selection.start != selection.end) {
             for (final c in list) {
                 final select = c.editorView.boxSelect(input.boxSelectionWorld);
                 if (select) {
@@ -552,7 +551,7 @@ class EditorInitialSelectionState implements EditorSelectionState {
     @override
     void drawBoxSelection(Window window, Painter painter, Input input) {
         const double selectionPointRadius = 7;
-        final selection = input.boxSelectionWorld;
+        final BoxSelection selection = input.boxSelectionWorld;
         if (input.isLMBDown && selection.start != selection.end) {
             painter.setPaint(color: cianColor.darker(0.25).withOpacity(0.2), width: 1);
             painter.drawCircle(window, window.worldToScreen(selection.start), selectionPointRadius);
@@ -570,10 +569,8 @@ class EditorInitialSelectionState implements EditorSelectionState {
 }
 
 
-class EditorDoneSelectionState implements EditorSelectionState {
-    EditorDoneSelectionState(Editor editor) {
-        Grid.drawFromBuffer = false;
-    }
+class EditorSelectionDoneState implements EditorSelectionState {
+    EditorSelectionDoneState(Editor editor);
 
     @override
     void processInput(Editor editor, Window window, Input input) {
@@ -583,7 +580,7 @@ class EditorDoneSelectionState implements EditorSelectionState {
         ).contains(input.mousePosWorld);
 
         if (input.isLMBDown && mouseInDragBox) {
-            editor.changeSelectionState(EditorSelectedState(editor));
+            editor.changeSelectionState(EditorDragSelectedState(editor));
         } else if (input.isLMBDown && !mouseInDragBox) {
             editor.changeSelectionState(EditorInitialSelectionState(editor));
         }
@@ -594,12 +591,12 @@ class EditorDoneSelectionState implements EditorSelectionState {
 }
 
 
-class EditorSelectedState implements EditorSelectionState {
-    EditorSelectedState(Editor editor);
+class EditorDragSelectedState implements EditorSelectionState {
+    EditorDragSelectedState(Editor editor);
     @override
     void processInput(Editor editor, Window window, Input input) {
         if (!input.isLMBDown) {
-            editor.changeSelectionState(EditorDoneSelectionState(editor));
+            editor.changeSelectionState(EditorSelectionDoneState(editor));
         } else {
             final Set<Node> nodes = {};
             for (final e in editor.selectedElements) {
@@ -608,7 +605,7 @@ class EditorSelectedState implements EditorSelectionState {
                 }
             }
             for (final n in nodes) {
-                n.position = n.position + (input.boxSelectionWorld.end - editor.dragBoxPosition);
+                n.position = n.position + (input.boxSelectionWorld.getEndSnapped() - editor.dragBoxPosition);
             }
 
             editor.dragBoxPosition = input.boxSelectionWorld.end;
@@ -832,6 +829,9 @@ class Editor {
 
 
 class Grid {
+    static bool snap = true;
+    static double snapLevel = 1.0;
+
     void drawMainAxis(Window window, Painter painter) {
         painter.setPaint(color: cianColor.darker(0.2), width: 3);
         painter.drawLine(
@@ -955,15 +955,10 @@ class EditorBar extends StatefulWidget {
 
 class _EditorBarState extends State<EditorBar> {
     List<bool> _selectionMode = [true, false];
-    List<bool> _hideElementsUI = [true];
-    List<bool> _magnetToGrid = [true];
 
-    double _value = 1.0;
     TextInputFormatter _formatter = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
 
     bool get _isBeamSelectionMode => _selectionMode[0];
-    bool get _elementsUIVisible => _hideElementsUI[0];
-    bool get _isMagnetToGrid => _magnetToGrid[0];  
 
     void _unselectAllElements() {
         widget.editor.resetSelectionState();
@@ -1025,7 +1020,7 @@ class _EditorBarState extends State<EditorBar> {
                             ToggleButtons(
                                 onPressed: (int _) {
                                     setState(() {
-                                        _magnetToGrid[0] = !_magnetToGrid[0];
+                                        Grid.snap = !Grid.snap;
                                     });
                                 },
                                 borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -1035,7 +1030,7 @@ class _EditorBarState extends State<EditorBar> {
                                 disabledColor: Colors.white,
                                 fillColor: cianColor.darker(0.2),
                                 color: cianColor.darker(0.2),
-                                isSelected: _magnetToGrid,
+                                isSelected: [Grid.snap],
                                 children: [Icon(CadIcons.snapToGrid, size: 32.0)],
                             ),
                         ],
@@ -1045,13 +1040,13 @@ class _EditorBarState extends State<EditorBar> {
                         height: 60.0,
                         width: 100,
                         child: TextField(
-                            controller: TextEditingController(text: _value.toStringAsFixed(6)),
+                            controller: TextEditingController(text: Grid.snapLevel.toStringAsFixed(6)),
                             //decoration: InputDecoration(labelText: "123"),
                             keyboardType: TextInputType.number,
                             inputFormatters: <TextInputFormatter>[
                                 _formatter,
                             ],
-                            onSubmitted: (value) => _value = double.parse(value),
+                            onSubmitted: (value) => Grid.snapLevel = double.parse(value),
                         ),
                     ),
 
@@ -1060,7 +1055,6 @@ class _EditorBarState extends State<EditorBar> {
                             ToggleButtons(
                                 onPressed: (int _) {
                                     setState(() {
-                                        _hideElementsUI[0] = !_hideElementsUI[0];
                                         widget.editor.elementsUIVisible = !widget.editor.elementsUIVisible;
                                     });
                                 },
@@ -1071,8 +1065,8 @@ class _EditorBarState extends State<EditorBar> {
                                 disabledColor: Colors.white,
                                 fillColor: cianColor.darker(0.2),
                                 color: cianColor.darker(0.2),
-                                isSelected: _hideElementsUI,
-                                children: _hideElementsUI[0] ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                                isSelected: [widget.editor.elementsUIVisible],
+                                children:  widget.editor.elementsUIVisible ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
                             ),
                         ],
                     ),

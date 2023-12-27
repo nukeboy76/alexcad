@@ -80,3 +80,7 @@ double floorToPowerOfTwo(double value) {
     double result = t.toDouble();
     return inv ? result : 1 / result;
 }
+
+double snap(double value, double snapLevel) {
+    return (value / snapLevel).round() * snapLevel;
+}

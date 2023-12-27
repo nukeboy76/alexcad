@@ -141,6 +141,14 @@ class BoxSelection {
     Offset start;
     Offset end;
 
+    Offset getEndSnapped() {
+        if (Grid.snap) {
+            return Offset(snap(end.dx, Grid.snapLevel), snap(end.dy, Grid.snapLevel));
+        } else {
+            return end;
+        }
+    }
+
     BoxSelection toWorld(Window window, Offset worldPoint) =>
         BoxSelection(window.screenToWorld(start), window.screenToWorld(end));
 
