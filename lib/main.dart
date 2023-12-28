@@ -261,8 +261,9 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
     }
 
     void _jsonToEditor(dynamic json) {
-        Node.resetNodeIndex();
+        widget.editor.clearAllElements();
         json = jsonDecode(json);
+
         var nodesJson = json['nodes'] as List;
         List<Node> newNodes = nodesJson.map((node) => Node.fromJson(node)).toList();
         var beamsJson = json['beams'] as List;
@@ -287,14 +288,16 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                 // User canceled the picker
             }
         } catch (e) {
-            //print(e);
+            print(e);
         }
     }
 
     void _writeEditorData() async {
         if (openFilePath != null) {
             final file = File(openFilePath!);
-            file.writeAsString(_editorDataToJson());
+            final data = _editorDataToJson();
+            print(data);
+            file.writeAsString(data);
         } else {
             _writeEditorDataToPath.call();
         }
@@ -310,7 +313,6 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
             lockParentWindow: true,
         );
 
-        print(outputFile);
         try {
             if (outputFile != null) {
                 openFilePath = outputFile;
@@ -333,6 +335,10 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
 
     void _saveFileAs() {
         _writeEditorDataToPath.call();
+    }
+
+    void _startNew() {
+        widget.editor.clearAllElements();
     }
 
     @override
@@ -397,6 +403,24 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                             });
                         },
                         child: const Text('Save as'),
+                    ),
+                    SizedBox(width: spaceBetween * 3),
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: cianColor.darker(0.3),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(edgeInsets),
+                            textStyle: const TextStyle(fontSize: fontSize),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(roundness),
+                            ),
+                        ),
+                        onPressed: () {
+                            setState(() {
+                                _startNew();
+                            });
+                        },
+                        child: const Text('New'),
                     ),
                 ],
             ),
