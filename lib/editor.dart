@@ -604,8 +604,10 @@ class EditorDragSelectedState implements EditorSelectionState {
                     nodes.add(node);
                 }
             }
+
+            final endPos = input.boxSelectionWorld.getEndSnapped();
             for (final n in nodes) {
-                n.position = n.position + (input.boxSelectionWorld.getEndSnapped() - editor.dragBoxPosition);
+                n.position = n.position + (endPos - editor.dragBoxPosition);
             }
 
             editor.dragBoxPosition = input.boxSelectionWorld.end;
