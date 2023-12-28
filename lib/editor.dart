@@ -1223,14 +1223,16 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
 
     final Calculation calc = Calculation();
 
-    String get _deltas {
-        final List<double>? deltas = calc.getDeltas(widget.editor.beams);
-        return deltas != null ? deltas.toString() : "";
-    }
-
     @override
     Widget build(BuildContext context) {
         if (!widget.editor.showCalcOverlay) return SizedBox.shrink();
+
+        calc.isElementsValid(widget.editor.beams);
+        final List<double> deltas = calc.getDeltas(widget.editor.beams);
+        final List<double> normalTensions = calc.getNormalTensions(widget.editor.beams, deltas);
+
+        final String deltasStr = deltas != null ? deltas.toString() : "";
+        final String normalTensionsStr = normalTensions != null ? normalTensions.toString() : "";
 
         return Container(
             width: widget.width,
@@ -1263,7 +1265,8 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                         ),
                     ),
                     Text(widget.title),
-                    Text("Delta: $_deltas"),
+                    Text("Delta: $deltasStr"),
+                    Text("Normal tensions: $normalTensionsStr"),
                 ],
             ),
         );
@@ -1273,6 +1276,19 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
 
 class Calculation {
     double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;
+
+    bool isElementsValid(List<Beam> beams) {
+        return true;
+
+        // TODO: fix bug: always return false (skip for loop)
+        /*
+        if (beams.isNotEmpty) { return true; }
+        for (final b in beams) {
+            if (b.start.fixator != NodeFixator.disabled || b.end.fixator != NodeFixator.disabled) { return true; }
+        }
+        return false;
+        */
+    }
 
     Array2d _getMatrixA(List<Beam> beams) {
         final int beamsLength = beams.length;
@@ -1329,24 +1345,46 @@ class Calculation {
         return matrix;
     }
 
-    List<double>? getDeltas(List<Beam> beams) {
+    List<double> getDeltas(List<Beam> beams) {
         try {
             final List<Beam> newBeams = List.from(beams.reversed);
             final a = _getMatrixA(newBeams);
             final b = _getMatrixB(newBeams);
             final deltas = matrixSolve(a, b).getColumn(0);
             print(deltas);
-            return deltas != null ? deltas.toList() : null;
+            return deltas != null ? deltas.toList() : [];
         } catch (e) {
-            return null;
+            print(e);
+            return [];
         }
     }
 
-    bool isElementsValid(List<Beam> beams) {
-        if (beams.isNotEmpty) { return true; }
-        for (final b in beams) {
-            if (b.start.fixator != NodeFixator.disabled || b.end.fixator != NodeFixator.disabled) { return true; }
+    double normalTension(
+        Beam beam,
+        double deltaA,
+        double deltaB,
+        double lengthCum,
+    ) {
+        return (beam.elasticity * beam.sectionArea) * (deltaA - deltaB) / beam.length + (beam.force.dx * beam.length / 2) * (1 - 2 * lengthCum / beam.length);
+    }
+
+    List<double> getNormalTensions(List<Beam> oldBeams, List<double> deltas) {
+        try {
+            final List<Beam> beams = List.from(oldBeams.reversed);
+            List<double> normalTensions = [];
+            double lengthCum = 0;
+
+            for (int i = 0; i < beams.length; i++) {
+                normalTensions.add(normalTension(beams[i], deltas[i], deltas[i + 1], lengthCum));
+                lengthCum += beams[i].length;
+                normalTensions.add(normalTension(beams[i], deltas[i], deltas[i + 1], lengthCum));
+            }
+
+            print(normalTensions);
+            return normalTensions;
+        } catch (e) {
+            print(e);
+            return [];
         }
-        return false;
     }
 }
