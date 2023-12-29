@@ -17,30 +17,30 @@ const String defaultTextInputRegExpTemplate = '[0-9\.\-]';
 const String positiveTextInputRegExpTemplate = '[0-9\.]';
 
 
-abstract class InspectorView {
-    Widget get widget;
-}
+//abstract class InspectorView {
+//    Widget get widget;
+//}
 
 
-class NodeInspectorView extends InspectorView {
-    NodeInspectorView(this.element);
+//class NodeInspectorView extends InspectorView {
+//    NodeInspectorView(this.element);
 
-    final element;
+//    final element;
 
-    Widget get widget => NodeWidget(
-        onChange: (value) {},
-        node: element,
-    );
-}
+//    Widget get widget => NodeWidget(
+//        onChange: (value) {},
+//        node: element,
+//    );
+//}
 
 
-class BeamInspectorView extends InspectorView {
-    BeamInspectorView(this.element);
+//class BeamInspectorView extends InspectorView {
+//    BeamInspectorView(this.element);
 
-    final element;
+//    final element;
 
-    Widget get widget => BeamWidget(beam: element);
-}
+//    Widget get widget => BeamWidget(beam: element, );
+//}
 
 
 class Inspector extends StatefulWidget {
@@ -50,6 +50,7 @@ class Inspector extends StatefulWidget {
         this.height = 1080,
         this.title = "Inspector",
         this.child,
+        required this.update,
     });
 
     final Color color = purpleColor.lighter(0.9);
@@ -58,6 +59,7 @@ class Inspector extends StatefulWidget {
     final double height;
     final String title;
     final Widget? child;
+    final update;
 
     @override
     State<Inspector> createState() => _InspectorState();
@@ -83,7 +85,22 @@ class _InspectorState extends State<Inspector> {
                             widget.title,
                             textAlign: TextAlign.center,
                         ),
-                        selectedElementsLength != 1 ? Row() : widget.selectedElements[0].inspectorView.widget,
+                        selectedElementsLength != 1 ? Row() : selectedIsBeam ?
+                            BeamWidget(
+                                beam: widget.selectedElements[0],
+                                onChange: () { 
+                                    setState(() {
+                                        widget.update();
+                                    });
+                                },
+                            ) : NodeWidget(
+                                node: widget.selectedElements[0],
+                                onChange: () {
+                                    setState(() {
+                                        widget.update();
+                                    });
+                                },
+                            ),
                     ],
                 ),
             ),
@@ -97,10 +114,12 @@ class BeamWidget extends StatefulWidget {
         super.key,
         required this.beam,
         this.title = "Beam",
+        required this.onChange,
     });
 
     Beam beam;
     String title;
+    final onChange;
 
     final sectionValues = BeamSection.values.map((e) => DropdownMenuItem(
         child: Text(e.name),
@@ -120,18 +139,18 @@ class _BeamWidgetState extends State<BeamWidget> {
             children: [
                 Text(widget.title),
                 NodeWidget(
-                    onChange: (value) {
+                    onChange: () {
                         setState(() {
-                            widget.beam.start.fixator = value;
+                            widget.onChange();
                         });
                     },
                     title: "Start node",
                     node: widget.beam.start,
                 ),
                 NodeWidget(
-                    onChange: (value) {
+                    onChange: () {
                         setState(() {
-                            widget.beam.end.fixator = value;
+                            widget.onChange();
                         });
                     },
                     title: "End node",
@@ -141,6 +160,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.beam.force = value;
                         });
                     },
@@ -159,6 +179,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                 SingleValueWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.beam.sectionArea = value;
                         });
                     },
@@ -170,6 +191,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                 SingleValueWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.beam.elasticity = value;
                         });
                     },
@@ -180,6 +202,7 @@ class _BeamWidgetState extends State<BeamWidget> {
                 SingleValueWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.beam.tension = value;
                         });
                     },
@@ -211,7 +234,13 @@ class NodeWidget extends StatefulWidget {
 
 
 class _NodeWidgetState extends State<NodeWidget> {
-    final TextEditingController fixatorController = TextEditingController();
+    TextEditingController _fixatorController = TextEditingController();
+
+    @override
+    void dispose() {
+        _fixatorController.dispose();
+        super.dispose();
+    }
 
     @override
     Widget build(BuildContext context) {
@@ -225,6 +254,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.node.position = value;
                         });
                     },
@@ -236,6 +266,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.node.force = value;
                         });
                     },
@@ -244,10 +275,10 @@ class _NodeWidgetState extends State<NodeWidget> {
                     labelX: "Fx",
                     labelY: "Fy",
                 ),
-                //Text("Node parameters"),
                 SingleValueWidget(
                     onChange: (value) {
                         setState(() {
+                            widget.onChange();
                             widget.node.torqueForce = value;
                         });
                     },
@@ -264,9 +295,14 @@ class _NodeWidgetState extends State<NodeWidget> {
                         Flexible(
                             child: DropdownMenu<NodeFixator>(
                                 initialSelection: widget.node.fixator,
-                                controller: fixatorController,
+                                controller: _fixatorController,
                                 requestFocusOnTap: false,
-                                onSelected: (value) => widget.onChange(value),
+                                onSelected: (value) {
+                                    setState(() {
+                                        widget.onChange();
+                                        widget.node.fixator = value!;
+                                    });
+                                },
                                 dropdownMenuEntries: NodeFixator.values
                                         .map<DropdownMenuEntry<NodeFixator>>(
                                                 (NodeFixator nodeFixator) {
@@ -289,7 +325,7 @@ class _NodeWidgetState extends State<NodeWidget> {
 }
 
 
-class OffsetWidget extends StatelessWidget {
+class OffsetWidget extends StatefulWidget {
     OffsetWidget({
         super.key,
         required this.onChange,
@@ -304,8 +340,29 @@ class OffsetWidget extends StatelessWidget {
     String title;
     String labelX;
     String labelY;
+
+    @override
+    State<OffsetWidget> createState() => _OffsetWidgetState(this.offset);
+}
+
+
+class _OffsetWidgetState extends State<OffsetWidget> {
+    _OffsetWidgetState(Offset offset) : 
+        _controllerX = TextEditingController(text: offset.dx.toStringAsFixed(6)),
+        _controllerY = TextEditingController(text: offset.dy.toStringAsFixed(6));
+
     TextInputFormatter formatterX = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
     TextInputFormatter formatterY = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
+
+    TextEditingController _controllerX;
+    TextEditingController _controllerY;
+
+    @override
+    void dispose() {
+        _controllerX.dispose();
+        _controllerY.dispose();
+        super.dispose();
+    }
 
     @override
     Widget build(BuildContext context) {
@@ -317,29 +374,37 @@ class OffsetWidget extends StatelessWidget {
                     children: [
                         Flexible(
                             child: Text(
-                                title,
+                                widget.title,
                             ),
                         ),
                         Flexible(
                             child: TextField(
-                                controller: TextEditingController(text: offset.dx.toStringAsFixed(6)),
-                                decoration: InputDecoration(labelText: labelX),
+                                controller: _controllerX,
+                                decoration: InputDecoration(labelText: widget.labelX),
                                 keyboardType: TextInputType.number,
                                 inputFormatters: <TextInputFormatter>[
                                     formatterX,
                                 ],
-                                onSubmitted: (value) => onChange(Offset(double.parse(value), offset.dy)),
+                                onChanged: (value) {
+                                    setState(() {
+                                        widget.onChange(Offset(double.parse(value), widget.offset.dy));
+                                    });
+                                }
                             ),
                         ),
                         Flexible(
                             child: TextField(
-                                controller: TextEditingController(text: offset.dy.toStringAsFixed(6)),
-                                decoration: InputDecoration(labelText: labelY),
+                                controller: _controllerY,
+                                decoration: InputDecoration(labelText: widget.labelY),
                                 keyboardType: TextInputType.number,
                                 inputFormatters: <TextInputFormatter>[
                                     formatterY,
                                 ],
-                                onSubmitted: (value) => onChange(Offset(offset.dx, double.parse(value))),
+                                onChanged: (value) {
+                                    setState(() { 
+                                        widget.onChange(Offset(widget.offset.dx, double.parse(value)));
+                                    });
+                                },
                             ),
                         ),
                     ],
@@ -350,7 +415,7 @@ class OffsetWidget extends StatelessWidget {
 }
 
 
-class SingleValueWidget extends StatelessWidget {
+class SingleValueWidget extends StatefulWidget {
     SingleValueWidget({
         super.key,
         required this.onChange,
@@ -371,6 +436,22 @@ class SingleValueWidget extends StatelessWidget {
     TextInputFormatter formatter = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
 
     @override
+    State<SingleValueWidget> createState() => _SingleValueWidgetState(value);
+}
+
+
+class _SingleValueWidgetState extends State<SingleValueWidget> {
+    _SingleValueWidgetState(dynamic value) : _controller = TextEditingController(text: value.toStringAsFixed(6));
+
+    TextEditingController _controller;
+
+    @override
+    void dispose() {
+        _controller.dispose();
+        super.dispose();
+    }
+
+    @override
     Widget build(BuildContext context) {
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -380,18 +461,24 @@ class SingleValueWidget extends StatelessWidget {
                     children: [
                         Flexible(
                             child: Text(
-                                title,
+                                widget.title,
                             ),
                         ),
                         Flexible(
-                            child: TextField(
-                                controller: TextEditingController(text: value.toStringAsFixed(6)),
-                                decoration: InputDecoration(labelText: label),
+                            child: TextFormField(
+                                autofocus: true,
+                                controller: _controller,
+                                decoration: InputDecoration(labelText: widget.label),
                                 keyboardType: TextInputType.number,
                                 inputFormatters: <TextInputFormatter>[
-                                    formatter,
+                                    widget.formatter,
                                 ],
-                                onSubmitted: (value) => onChange(double.parse(value)),
+                                onChanged: (value) {
+                                    setState(() {
+                                        print(double.parse(value));
+                                        widget.onChange(double.parse(value));
+                                    });
+                                },
                             ),
                         ),
                     ],

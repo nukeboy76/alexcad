@@ -24,12 +24,12 @@ void main() async{
     //await windowManager.ensureInitialized();
     //WindowManager.instance.setMinimumSize(const Size(600, 400));
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.leanBack);
-    runApp(const MyApp());
+    runApp(const App());
 }
 
 
-class MyApp extends StatelessWidget {
-    const MyApp({super.key});
+class App extends StatelessWidget {
+    const App({super.key});
 
     @override
     Widget build(BuildContext context) {
@@ -41,36 +41,36 @@ class MyApp extends StatelessWidget {
                 useMaterial3: true,
             ),
             home: new Scaffold(
-                body: const CADEditor(),
+                body: const AppWidget(),
             ),
         );
     }
 }
 
 
-class CADEditor extends StatefulWidget {
-    const CADEditor({super.key});
+class AppWidget extends StatefulWidget {
+    const AppWidget({super.key});
 
     @override
-    State<CADEditor> createState() => CADEditorState();
+    State<AppWidget> createState() => AppWidgetState();
 }
 
 
-class CADEditorState extends State<CADEditor> {
-    CADEditorState() {
+class AppWidgetState extends State<AppWidget> {
+    AppWidgetState() {
         input = Input(barHeight: barHeight + fileOperationsBarHeight);
     }
-
-    Window window = Window();
-
-    Input input = Input();
-    Editor editor = Editor();
-
-    Painter painter = Painter();
 
     static const double inspectorWidth = 300;
     static const double barHeight = 60;
     static const double fileOperationsBarHeight = 40;
+
+    Window window = Window();
+    Input input = Input();
+    Editor editor = Editor();
+    Painter painter = Painter();
+
+    bool showCalcOverlay = false;
 
     void init(Canvas canvas, Size size) {
         this.window.init(canvas, size);
@@ -119,7 +119,9 @@ class CADEditorState extends State<CADEditor> {
     void initState() {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.bottom]);
         super.initState();
-    } 
+    }
+
+    int inc = 0;
 
     @override
     Widget build(BuildContext context) {
@@ -147,6 +149,11 @@ class CADEditorState extends State<CADEditor> {
                                         editor,
                                         width: editorWidth,
                                         height: barHeight,
+                                        onChange: (value) {
+                                            setState(() {
+                                                showCalcOverlay = value;
+                                            });
+                                        },
                                     ),
                                     Stack(
                                         children: [
@@ -173,8 +180,8 @@ class CADEditorState extends State<CADEditor> {
                                                                 color: Colors.white,
                                                                 child: CustomPaint(
                                                                     //size: Size.infinite,
-                                                                    painter: CADEditorRenderer(
-                                                                        cad: this
+                                                                    painter: AppWidgetRenderer(
+                                                                        cad: this,
                                                                     ),
                                                                 ),
                                                             ),
@@ -192,6 +199,12 @@ class CADEditorState extends State<CADEditor> {
                                                 editor,
                                                 width: editorWidth,
                                                 height: editorHeight,
+                                                visible: showCalcOverlay,
+                                                close: () {
+                                                    setState(() {
+                                                        showCalcOverlay = false;
+                                                    });
+                                                },
                                             ),
                                         ],
                                     ),
@@ -201,6 +214,9 @@ class CADEditorState extends State<CADEditor> {
                                 editor.selectedElements,
                                 width: inspectorWidth,
                                 height: height - fileOperationsBarHeight,
+                                update: () {
+                                    setState(() {});
+                                },
                             ),
                         ],
                     ),
@@ -210,9 +226,10 @@ class CADEditorState extends State<CADEditor> {
     }
 }
 
-class CADEditorRenderer extends CustomPainter {
-    CADEditorState cad;
-    CADEditorRenderer({required this.cad});
+
+class AppWidgetRenderer extends CustomPainter {
+    AppWidgetRenderer({required this.cad});
+    AppWidgetState cad;
 
     @override
     void paint(Canvas canvas, Size size) {
@@ -224,6 +241,7 @@ class CADEditorRenderer extends CustomPainter {
     @override
     bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
+
 
 class FileOperationsBar extends StatefulWidget {
     FileOperationsBar(

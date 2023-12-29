@@ -56,7 +56,6 @@ abstract class EditorElement {
 
     bool selected;
 
-    late InspectorView inspectorView;
     late EditorView editorView;
 
     List<Node> getElementNodes() => [];
@@ -72,7 +71,6 @@ class Node implements EditorElement {
     }) {
         this._position = Offset(x, y);
         this.editorView = NodeEditorView(this);
-        this.inspectorView = NodeInspectorView(this);
 
         this.index = _globalIndex;
         _globalIndex++;
@@ -97,9 +95,6 @@ class Node implements EditorElement {
 
     @override
     late EditorView editorView;
-
-    @override
-    late InspectorView inspectorView;
 
     @override
     Offset get center => _position;
@@ -287,7 +282,6 @@ class Beam implements EditorElement {
         this.section = BeamSection.rect,
         this.selected = false,
     }) : assert(start != end) {
-        this.inspectorView = BeamInspectorView(this);
         this.editorView = BeamEditorView(this);
     }
 
@@ -315,9 +309,6 @@ class Beam implements EditorElement {
 
     @override
     late EditorView editorView;
-
-    @override
-    late InspectorView inspectorView;
 
     @override
     Offset get center => Offset(start.position.dx + end.position.dx, start.position.dy + end.position.dy) / 2;
@@ -620,28 +611,21 @@ class EditorDragSelectedState implements EditorSelectionState {
 
 
 class Editor {
-    Editor({
-        this.selectedElements = const [],
-        this.dragBoxPosition = Offset.infinite,
-        this.dragBoxRadius = 10,
-        this.elementsUIVisible = true,
-        this.showCalcOverlay = false,
-    }) {
+    Editor() {
         selectionState = EditorInitialSelectionState(this);
     }
 
     List<EditorElement> elements = [];
-    List<EditorElement> selectedElements;
-
-    Offset dragBoxPosition;
-    late double dragBoxRadius;
+    List<EditorElement> selectedElements = [];
 
     Grid grid = Grid();
 
     bool isBeamSelectionMode = true;
-    bool elementsUIVisible;
-    bool showCalcOverlay;
+    bool elementsUIVisible = true;
     late EditorSelectionState selectionState;
+
+    Offset dragBoxPosition = Offset.infinite;
+    double dragBoxRadius = 10;
 
     FocusNode focus = FocusNode();
 
@@ -927,7 +911,7 @@ class Grid {
             final String textX = coord.dx.toStringAsFixed(decimalLevel);
             final String textY = coord.dy.toStringAsFixed(decimalLevel);
 
-            if (coord.dy.abs() > 1e-9) {
+            if (coord.dy.abs() > 1e-7) {
                 painter.drawText(
                     window: window,
                     text: textY,
@@ -941,7 +925,7 @@ class Grid {
                 );
             }
 
-            if (coord.dx.abs() > 1e-9) {
+            if (coord.dx.abs() > 1e-7) {
                 painter.drawText(
                     window: window,
                     text: textX,
@@ -967,11 +951,13 @@ class EditorBar extends StatefulWidget {
     EditorBar(this.editor, {
         this.width,
         this.height,
+        this.onChange,
     });
 
     final Editor editor;
     final double? width;
     final double? height;
+    final onChange;
 
     @override
     State<EditorBar> createState() => _EditorBarState();
@@ -1035,7 +1021,7 @@ class _EditorBarState extends State<EditorBar> {
                         ),
                         onPressed: () {
                             Calculation calc = Calculation();
-                            widget.editor.showCalcOverlay = calc.isElementsValid(widget.editor.beams);
+                            widget.onChange(calc.isElementsValid(widget.editor.beams));
                         },
                         child: const Text('Delta'),
                     ),
@@ -1219,23 +1205,28 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
     }
 }
 
+
 class CalculationOverlay extends StatefulWidget {
     CalculationOverlay(
         this.editor, {
         this.width,
         this.height,
         this.title = "Calculation results",
-
+        this.visible = false,
+        required this.close,
     });
 
     final Editor editor;
     final String title;
     final double? width;
     final double? height;
+    final bool visible;
+    final close;
 
     @override
     State<CalculationOverlay> createState() => _CalculationOverlayState();
 }
+
 
 class _CalculationOverlayState extends State<CalculationOverlay> {
     static const double buttonHeight = 55;
@@ -1248,7 +1239,7 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
 
     @override
     Widget build(BuildContext context) {
-        if (!widget.editor.showCalcOverlay) return SizedBox.shrink();
+        if (!widget.visible) return SizedBox.shrink();
 
         final List<Beam> beams = widget.editor.beamsReversed;
         calc.isElementsValid(beams);
@@ -1279,7 +1270,7 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                             minWidth: minWidth,
                             onPressed: () {
                                 setState(() {
-                                    widget.editor.showCalcOverlay = false;
+                                    widget.close();
                                 });
                             },
                             color: pinkColor.darker(darkness),
