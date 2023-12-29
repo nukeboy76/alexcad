@@ -304,9 +304,6 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
     }
 
     void _writeEditorDataToPath() async {
-        final file = File(openFilePath!);
-        file.writeAsString(_editorDataToJson());
-
         String? outputFile = await FilePicker.platform.saveFile(
             dialogTitle: 'Please select an output file:',
             fileName: openFilePath != null ? openFilePath : defaultName,
@@ -316,6 +313,9 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
         try {
             if (outputFile != null) {
                 openFilePath = outputFile;
+
+                final file = File(openFilePath!);
+                file.writeAsString(_editorDataToJson());
 
             } else {
               // User canceled the picker

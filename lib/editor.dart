@@ -744,6 +744,7 @@ class Editor {
     void deleteSelectedElements() {
         List<Node> nodesToRemove = [];
         List<Beam> beamsToRemove = [];
+
         for (final e in selectedElements) {
             if (e is Node) {
                 for (final b in beams) {
@@ -1253,10 +1254,14 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
         calc.isElementsValid(beams);
 
         final List<double> deltas = calc.getDeltas(beams);
-        final List<double> normalTensions = calc.getNormalTensions(beams, deltas);
+        final List<double> longitudForces = calc.getLongitudForces(beams, deltas);
+        final List<double> normalTensions = calc.getNormalTensions(beams, longitudForces);
+        final List<double> movements = calc.getMovements(beams, deltas);
 
         final String deltasStr = deltas != null ? deltas.toString() : "";
+        final String longitudForcesStr = longitudForces != null ? longitudForces.toString() : "";
         final String normalTensionsStr = normalTensions != null ? normalTensions.toString() : "";
+        final String movementsStr = movements != null ? movements.toString() : "";
 
         return Container(
             width: widget.width,
@@ -1290,6 +1295,8 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                     ),
                     Text(widget.title),
                     Text("Delta: $deltasStr"),
+                    Text("Longtitudinal forces: $longitudForcesStr"),
+                    Text("Movements: $movementsStr"),
                     Text("Normal tensions: $normalTensionsStr"),
                 ],
             ),
@@ -1344,6 +1351,7 @@ class Calculation {
             matrix[beamsLength][beamsLength - 1] = 0;
         }
 
+        print("A: ");
         print(matrix);
 
         return matrix;
@@ -1355,14 +1363,21 @@ class Calculation {
         var matrix = Array2d.empty();
 
         matrix.add(beams.first.start.fixator == NodeFixator.disabled ?
-            Array([-q(beams.first.force.dx, beams.first.length) - beams.first.start.force.dx])
-            : Array([0.0]));
+            Array([-q(beams.first.force.dx, beams.first.length) + beams.first.start.force.dx])
+            : Array([0]));
+        print(matrix);
+
         for (int i = 1; i < beamsLength; i++) {
             matrix.add(Array([-q(beams[i - 1].force.dx, beams[i - 1].length) - q(beams[i].force.dx, beams[i].length) + beams[i].start.force.dx]));
         }
+
+        print(matrix);
+
         matrix.add(beams.last.end.fixator == NodeFixator.disabled ?
-            Array([-q(beams.last.force.dx, beams.last.length) - beams.last.start.force.dx])
-            : Array([0.0]));
+            Array([-q(beams.last.force.dx, beams.last.length) + beams.last.end.force.dx])
+            : Array([0]));
+
+        print(matrix);
 
         print("B matrix:");
         print(matrix);
@@ -1374,6 +1389,7 @@ class Calculation {
             final a = _getMatrixA(beams);
             final b = _getMatrixB(beams);
             final deltas = matrixSolve(a, b).getColumn(0);
+            print("Deltas:");
             print(deltas);
             return deltas != null ? deltas.toList() : [];
         } catch (e) {
@@ -1382,28 +1398,73 @@ class Calculation {
         }
     }
 
-    double normalTension(
+    double longitudForce(
         Beam beam,
         double deltaA,
         double deltaB,
-        double lengthCum,
+        double length,
     ) {
-        return (beam.elasticity * beam.sectionArea) * (deltaA - deltaB) / beam.length + (beam.force.dx * beam.length / 2) * (1 - 2 * lengthCum / beam.length);
+        return (beam.elasticity * beam.sectionArea / beam.length) * (deltaB - deltaA) + (beam.force.dx * beam.length / 2) * (1 - 2 * length / beam.length);
     }
 
-    List<double> getNormalTensions(List<Beam> beams, List<double> deltas) {
+    List<double> getLongitudForces(List<Beam> beams, List<double> deltas) {
         try {
-            List<double> normalTensions = [];
-            double lengthCum = 0;
+            List<double> longitudForces = [];
 
             for (int i = 0; i < beams.length; i++) {
-                normalTensions.add(normalTension(beams[i], deltas[i], deltas[i + 1], lengthCum));
-                lengthCum += beams[i].length;
-                normalTensions.add(normalTension(beams[i], deltas[i], deltas[i + 1], lengthCum));
+                longitudForces.add(longitudForce(beams[i], deltas[i], deltas[i + 1], 0.0));
+                longitudForces.add(longitudForce(beams[i], deltas[i], deltas[i + 1], beams[i].length));
             }
 
-            print(normalTensions);
+            print(longitudForces);
+            return longitudForces;
+        } catch (e) {
+            print(e);
+            return [];
+        }
+    }
+
+    List<double> getNormalTensions(List<Beam> beams, List<double> longitudForces) {
+        try {
+            List<double> normalTensions = [];
+
+            const c = 2;
+            for (int i = 0; i < beams.length; i++) {
+                for (int j = 0; j < c; j++) {
+                    normalTensions.add(longitudForces[i * c + j] / beams[i].sectionArea);
+                }
+            }
+
             return normalTensions;
+        } catch(e) {
+            print(e);
+            return [];
+        }
+    }
+
+    double movement(
+        Beam beam,
+        double deltaA,
+        double deltaB,
+        double length,
+    ) {
+        return (
+            deltaA + (length / beam.length) * (deltaB - deltaA) +
+            (beam.force.dx * beam.length * length) / (2 * beam.elasticity / beam.sectionArea) * (1 - length / beam.length)
+        );
+    }
+
+    List<double> getMovements(List<Beam> beams, List<double> deltas) {
+        try {
+            List<double> movements = [];
+
+            for (int i = 0; i < beams.length; i++) {
+                movements.add(movement(beams[i], deltas[i], deltas[i + 1], 0.0));
+                movements.add(movement(beams[i], deltas[i], deltas[i + 1], beams[i].length));
+            }
+
+            print(movements);
+            return movements;
         } catch (e) {
             print(e);
             return [];
