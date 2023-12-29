@@ -1,1 +1,1 @@
-{"nodes":[{"positionX":0.0,"positionY":0.0,"forceX":0.0,"forceY":0.0,"fixator":"h"},{"positionX":1.0,"positionY":0.0,"forceX":0.0,"forceY":0.0,"fixator":"h"}],"beams":[{"startI":0,"endI":1,"forceX":1.0,"forceY":0.0,"sectionArea":1.0,"elasticity":1.0,"tension":1.0}]}
+{"nodes":[{"positionX":0.0,"positionY":0.0,"forceX":0.0,"forceY":0.0,"fixator":"h"},{"positionX":1.0,"positionY":0.0,"forceX":0.0,"forceY":0.0,"fixator":"hvt"}],"beams":[{"startI":0,"endI":1,"forceX":1.0,"forceY":0.0,"sectionArea":1.0,"elasticity":1.0,"tension":1.0}]}
