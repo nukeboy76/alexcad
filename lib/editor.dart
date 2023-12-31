@@ -1389,7 +1389,7 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                                 height: widget.height! / 2,
                                 //color: Colors.grey,
                                 child: CustomPaint(
-                                    painter: CalculationConstructionRenderer(
+                                    painter: ConstructionRenderer(
                                         constructionWindow,
                                         beams: beams,
                                         nodes: nodes,
@@ -1406,8 +1406,8 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
 }
 
 
-class CalculationConstructionRenderer extends CustomPainter {
-    CalculationConstructionRenderer(
+class ConstructionRenderer extends CustomPainter {
+    ConstructionRenderer(
         this.window, {
         required this.beams,
         required this.nodes,
