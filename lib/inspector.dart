@@ -17,32 +17,6 @@ const String defaultTextInputRegExpTemplate = '[0-9\.\-]';
 const String positiveTextInputRegExpTemplate = '[0-9\.]';
 
 
-//abstract class InspectorView {
-//    Widget get widget;
-//}
-
-
-//class NodeInspectorView extends InspectorView {
-//    NodeInspectorView(this.element);
-
-//    final element;
-
-//    Widget get widget => NodeWidget(
-//        onChange: (value) {},
-//        node: element,
-//    );
-//}
-
-
-//class BeamInspectorView extends InspectorView {
-//    BeamInspectorView(this.element);
-
-//    final element;
-
-//    Widget get widget => BeamWidget(beam: element, );
-//}
-
-
 class Inspector extends StatefulWidget {
     Inspector(this.selectedElements, {
         super.key,
@@ -185,7 +159,6 @@ class _BeamWidgetState extends State<BeamWidget> {
                     },
                     value: widget.beam.sectionArea,
                     title: "Section area",
-                    label: "Area",
                     overrideFormatter: FilteringTextInputFormatter.allow(RegExp(positiveTextInputRegExpTemplate)),
                 ),
                 SingleValueWidget(
@@ -348,8 +321,8 @@ class OffsetWidget extends StatefulWidget {
 
 class _OffsetWidgetState extends State<OffsetWidget> {
     _OffsetWidgetState(Offset offset) : 
-        _controllerX = TextEditingController(text: offset.dx.toStringAsFixed(6)),
-        _controllerY = TextEditingController(text: offset.dy.toStringAsFixed(6));
+        _controllerX = TextEditingController(text: offset.dx.toString()),
+        _controllerY = TextEditingController(text: offset.dy.toString());
 
     TextInputFormatter formatterX = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
     TextInputFormatter formatterY = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
@@ -441,7 +414,7 @@ class SingleValueWidget extends StatefulWidget {
 
 
 class _SingleValueWidgetState extends State<SingleValueWidget> {
-    _SingleValueWidgetState(dynamic value) : _controller = TextEditingController(text: value.toStringAsFixed(6));
+    _SingleValueWidgetState(dynamic value) : _controller = TextEditingController(text: value.toString());
 
     TextEditingController _controller;
 
