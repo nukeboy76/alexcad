@@ -13,8 +13,8 @@ import 'utils/utils.dart';
 import 'window.dart';
 
 
-const String defaultTextInputRegExpTemplate = '[0-9\.\-]';
-const String positiveTextInputRegExpTemplate = '[0-9\.]';
+const String defaultTextInputRegExpTemplate = '[+-]?\\d*\\.?\\d+';
+const String positiveTextInputRegExpTemplate = '[+]?\\d*\\.?\\d+';
 
 
 class Inspector extends StatefulWidget {

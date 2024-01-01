@@ -34,10 +34,14 @@ class Painter {
         bool outline = false,
         bool centerAlignX = false,
         bool centerAlignY = false,
+        String? fontFamily,
+        FontStyle? fontStyle,
     }) {
         final textStyle = TextStyle(
             color: textColor,
             fontSize: fontSize,
+            fontFamily: fontFamily,
+            fontStyle: fontStyle,
             background: Paint()..color = bgColor,
             shadows: outline ? [
                 Shadow( // bottomLeft
@@ -115,6 +119,10 @@ class Painter {
 
     void drawRect(Window window, Rect rect) {
         window.canvas.drawRect(rect, paint);
+    }
+
+    void drawRectWithPaint(Window window, Rect rect, Paint p) {
+        window.canvas.drawRect(rect, p);
     }
 
     void drawRectStroke(Window window, Rect rect) {

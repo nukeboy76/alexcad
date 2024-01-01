@@ -15,6 +15,7 @@ import 'inspector.dart';
 import 'painter.dart';
 import 'types.dart';
 import 'utils/utils.dart';
+import 'utils/colors.dart';
 import 'window.dart';
 
 
@@ -347,10 +348,7 @@ class Beam implements EditorElement {
         );
     }
 
-    Map toJson() {
-        print(start.index);
-        print(end.index);
-    return {
+    Map toJson() => {
         'startI': start.index,
         'endI': end.index,
         'forceX': force.dx,
@@ -358,7 +356,7 @@ class Beam implements EditorElement {
         'sectionArea': sectionArea,
         'elasticity': elasticity,
         'tension': tension,
-    };}
+    };
 }
 
 
@@ -979,72 +977,88 @@ class _EditorBarState extends State<EditorBar> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                    Column(
-                        children: [
-                            ToggleButtons(
-                                onPressed: (int index) {
-                                    setState(() {
-                                        _unselectAllElements();
-                                        for (int i = 0; i < _selectionMode.length; i++) {
-                                            _selectionMode[i] = i == index;
-                                        }
-                                        widget.editor.isBeamSelectionMode = _selectionMode[0];
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: _selectionMode,
-                                children: selectionModeIcons,
-                            ),
-                        ],
-                    ),
-
-                    TextButton(
-                        style: TextButton.styleFrom(
-                            backgroundColor: pinkColor.darker(0.0),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(16.0),
-                            textStyle: const TextStyle(fontSize: 20),
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.loose,
+                        child:
+                        Column(
+                            children: [
+                                ToggleButtons(
+                                    onPressed: (int index) {
+                                        setState(() {
+                                            _unselectAllElements();
+                                            for (int i = 0; i < _selectionMode.length; i++) {
+                                                _selectionMode[i] = i == index;
+                                            }
+                                            widget.editor.isBeamSelectionMode = _selectionMode[0];
+                                        });
+                                    },
+                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                    selectedBorderColor: cianColor.darker(0.3),
+                                    selectedColor: Colors.white,
+                                    disabledBorderColor: Colors.white,
+                                    disabledColor: Colors.white,
+                                    fillColor: cianColor.darker(0.2),
+                                    color: cianColor.darker(0.2),
+                                    isSelected: _selectionMode,
+                                    children: selectionModeIcons,
+                                ),
+                            ],
                         ),
-                        onPressed: () {
-                            Calculation calc = Calculation();
-                            widget.onChange(calc.isElementsValid(widget.editor.beams));
-                        },
-                        child: const Text('Delta'),
                     ),
 
-                    Column(
-                        children: [
-                            ToggleButtons(
-                                onPressed: (int _) {
-                                    setState(() {
-                                        Grid.snap = !Grid.snap;
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: [Grid.snap],
-                                children: [Icon(CadIcons.snapToGrid, size: 32.0)],
+                    Flexible(flex: 4, fit: FlexFit.loose, child: Container()),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.loose,
+                        child: TextButton(
+                            style: TextButton.styleFrom(
+                                backgroundColor: pinkColor.lighter(0.2),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.all(16.0),
+                                textStyle: const TextStyle(fontSize: 20),
                             ),
-                        ],
+                            onPressed: () {
+                                Calculation calc = Calculation();
+                                widget.onChange(calc.isElementsValid(widget.editor.beams));
+                            },
+                            child: const Text('Calc'),
+                        ),
                     ),
 
-                    SizedBox(
-                        height: 60.0,
-                        width: 100,
+                    Flexible(flex: 4, fit: FlexFit.loose, child: Container()),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.tight,
+                        child: Row(
+                            children: [
+                                ToggleButtons(
+                                    onPressed: (int _) {
+                                        setState(() {
+                                            Grid.snap = !Grid.snap;
+                                        });
+                                    },
+                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                    selectedBorderColor: cianColor.darker(0.3),
+                                    selectedColor: Colors.white,
+                                    disabledBorderColor: Colors.white,
+                                    disabledColor: Colors.white,
+                                    fillColor: cianColor.darker(0.2),
+                                    color: cianColor.darker(0.2),
+                                    isSelected: [Grid.snap],
+                                    children: [Icon(CadIcons.snapToGrid, size: 32.0)],
+                                ),
+                            ],
+                        ),
+                    ),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.tight,
                         child: TextField(
                             controller: TextEditingController(text: Grid.snapLevel.toString()),
-                            //decoration: InputDecoration(labelText: "123"),
                             keyboardType: TextInputType.number,
                             inputFormatters: <TextInputFormatter>[
                                 _formatter,
@@ -1053,25 +1067,31 @@ class _EditorBarState extends State<EditorBar> {
                         ),
                     ),
 
-                    Column(
+                    Flexible(flex: 1, fit: FlexFit.tight, child: Container()),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.loose,
+                        child: Column(
                         children: [
-                            ToggleButtons(
-                                onPressed: (int _) {
-                                    setState(() {
-                                        widget.editor.elementsUIVisible = !widget.editor.elementsUIVisible;
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: [widget.editor.elementsUIVisible],
-                                children:  widget.editor.elementsUIVisible ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
-                            ),
-                        ],
+                                ToggleButtons(
+                                    onPressed: (int _) {
+                                        setState(() {
+                                            widget.editor.elementsUIVisible = !widget.editor.elementsUIVisible;
+                                        });
+                                    },
+                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                    selectedBorderColor: cianColor.darker(0.3),
+                                    selectedColor: Colors.white,
+                                    disabledBorderColor: Colors.white,
+                                    disabledColor: Colors.white,
+                                    fillColor: cianColor.darker(0.2),
+                                    color: cianColor.darker(0.2),
+                                    isSelected: [widget.editor.elementsUIVisible],
+                                    children:  widget.editor.elementsUIVisible ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                                ),
+                            ],
+                        ),
                     ),
                 ],
             ),
@@ -1132,7 +1152,6 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                            SizedBox(width: 47),
                             !isBeamSelectionMode ? MaterialButton(
                                 height: buttonHeight,
                                 minWidth: minWidth,
@@ -1220,13 +1239,6 @@ class CalculationOverlay extends StatefulWidget {
 }
 
 
-enum CalculationType {
-    movements,
-    longitudForces,
-    normalTensions,
-}
-
-
 class _CalculationOverlayState extends State<CalculationOverlay> {
     static const double buttonHeight = 55;
     static const double minWidth = 40;
@@ -1242,8 +1254,8 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     Window normalTensionsWindow = Window();
     Painter painter = Painter();
 
-    CalculationType heatMapType = CalculationType.longitudForces;
-    bool showHeatMap = true;
+    bool _showHeatMap = true;
+    List<bool> _heatMapType = [true, false, false];
 
     List<double> _lengths(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].length);
     List<double> _sectionAreas(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].sectionArea);
@@ -1259,7 +1271,7 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
             final double step = length / 200;
             List<double> beamMovements = [];
 
-            for (double j = 0; j < length + 1e-16; j += step) {
+            for (double j = 0; j < length + 1e-8; j += step) {
                 beamMovements.add(calc.movement(beams[i], deltas[i], deltas[i + 1], j));
             }
 
@@ -1306,8 +1318,9 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
         if (!widget.visible) return SizedBox.shrink();
 
         final List<Beam> beams = widget.editor.beamsReversed;
+        if (!calc.isElementsValid(beams)) return Spacer();
+
         final List<Node> nodes = widget.editor.nodes;
-        calc.isElementsValid(beams);
 
         final List<double> deltas = calc.getDeltas(beams);
         final List<double> longitudForces = calc.getLongitudForces(beams, deltas);
@@ -1319,34 +1332,21 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
         final String movementsStr = movements != null ? movements.toString() : "";
         final String normalTensionsStr = normalTensions != null ? normalTensions.toString() : "";
 
-        List<List<double>>? values;
+        List<List<double>>? values = [];
 
-        if (showHeatMap) {
-            switch (heatMapType) {
-                case CalculationType.movements:
-                    values = _detailedMovements(beams, deltas);
-                case CalculationType.longitudForces:
-                    values = _detailedLongitudForces(beams, deltas);
-                case CalculationType.normalTensions:
-                    values = _detailedNormalTensions(beams, longitudForces);
-            }
+        const List<Widget> calcTypeLabels = <Widget>[
+          Text('Nx'),
+          Text('Ux'),
+          Text('σx'),
+        ];
 
-            print(heatMapType);
-            print(values);
+        if (_showHeatMap) {
+            if (_heatMapType[0]) values = _detailedMovements(beams, deltas);
+            else if (_heatMapType[1]) values = _detailedLongitudForces(beams, deltas);
+            else if (_heatMapType[2]) values = _detailedNormalTensions(beams, longitudForces);
         }
 
-        //final detailedLongitudForces = _detailedLongitudForces(beams, deltas);
-        //final detailedMovements = _detailedMovements(beams, deltas);
-        //final detailedNormalTensions = _detailedNormalTensions(beams, longitudForces);
-        //print(detailedLongitudForces);
-        //print(detailedMovements);
-        //print(detailedNormalTensions);
-
         final lengths = _lengths(beams);
-        final sectionAreas = _sectionAreas(beams);
-        final elasticities = _elasticities(beams);
-        final beamForces = _beamForces(beams);
-        final nodeForces = _nodeForces(beams);
 
         return Container(
             width: widget.width,
@@ -1379,23 +1379,94 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                                     ),
                                 ),
                             ),
-                            Text(widget.title),
-                            Text("Delta: $deltasStr"),
-                            Text("Longtitudinal forces: $longitudForcesStr"),
-                            Text("Movements: $movementsStr"),
-                            Text("Normal tensions: $normalTensionsStr"),
-                            Container(
-                                width: widget.width! / 2,
-                                height: widget.height! / 2,
-                                //color: Colors.grey,
-                                child: CustomPaint(
-                                    painter: ConstructionRenderer(
-                                        constructionWindow,
-                                        beams: beams,
-                                        nodes: nodes,
-                                        loadValues: values,
-                                    ),
+                            Text(
+                                widget.title,
+                                style: TextStyle(
+                                    fontSize: 25,
+                                    fontFamily: 'Gost',
                                 ),
+                            ),
+                            Text(
+                                "Δ = $deltasStr",
+                                style: TextStyle(
+                                    fontSize: 25,
+                                    fontFamily: 'Gost',
+                                ),
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Flexible(flex: 1, child: Container()),
+                                    Flexible(
+                                        flex: 2,
+                                        fit: FlexFit.tight,
+                                        child: Container(
+                                            width: widget.width! / 2,
+                                            height: (widget.height! / 2),
+                                            child: CustomPaint(
+                                                painter: ConstructionRenderer(
+                                                    constructionWindow,
+                                                    beams: beams,
+                                                    nodes: nodes,
+                                                    loadValues: values,
+                                                    showHeatMap: _showHeatMap,
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                    Flexible(
+                                        flex: 1,
+                                        fit: FlexFit.tight,
+                                        child: Column (
+                                            children: [
+                                                ToggleButtons(
+                                                    direction: Axis.vertical,
+                                                    onPressed: (int index) {
+                                                        setState(() {
+                                                            _showHeatMap = !_showHeatMap;
+                                                        });
+                                                    },
+                                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                                    selectedBorderColor: pinkColor.withBrightness(0.2),
+                                                    selectedColor: Colors.white,
+                                                    fillColor: pinkColor.withBrightness(0),
+                                                    color: pinkColor.withBrightness(-0.2),
+                                                    constraints: const BoxConstraints(
+                                                        minHeight: 40.0,
+                                                        minWidth: 80.0,
+                                                    ),
+                                                    isSelected: [_showHeatMap],
+                                                    children:  _showHeatMap ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                                                ),
+                                                SizedBox(height: 40, width: 80),
+                                                ToggleButtons(
+                                                    direction: Axis.vertical,
+                                                    onPressed: (int index) {
+                                                        setState(() {
+                                                            for (int i = 0; i < _heatMapType.length; i++) {
+                                                                _heatMapType[i] = i == index;
+                                                            }
+                                                        });
+                                                    },
+                                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                                    selectedBorderColor: pinkColor.withBrightness(0.2),
+                                                    selectedColor: Colors.white,
+                                                    fillColor: pinkColor.withBrightness(0),
+                                                    color: pinkColor.withBrightness(-0.2),
+                                                    constraints: const BoxConstraints(
+                                                        minHeight: 40.0,
+                                                        minWidth: 80.0,
+                                                    ),
+                                                    isSelected: _heatMapType,
+                                                    children: calcTypeLabels,
+                                                ),
+                                            ],
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Container(
+                                height: 20,
                             ),
                         ],
                     ),
@@ -1411,15 +1482,21 @@ class ConstructionRenderer extends CustomPainter {
         this.window, {
         required this.beams,
         required this.nodes,
-        List<List<double>>? loadValues,
+        required this.loadValues,
+        required this.showHeatMap,
     });
 
     Window window;
     List<Beam> beams;
     List<Node> nodes;
+    List<List<double>> loadValues;
+    bool showHeatMap;
+
     Painter painter = Painter();
 
-    static const double nodeForceArrowLength = 50;
+    static const double nodeForceArrowLength = 80;
+    static const double circleRadius = 18;
+    static const double labelsFontSize = 24;
 
     double _lengthsSum(List<Beam> beams) {
         double total = 0;
@@ -1429,12 +1506,105 @@ class ConstructionRenderer extends CustomPainter {
         return total;
     }
 
-    double _maxSectionArea(List<Beam> beams) {
-        double max = 0;
-        for (final b in beams) {
-            if (max < b.sectionArea) max = b.sectionArea;
-        }
-        return max;
+    void _drawLegend() {
+        if (!showHeatMap) return;
+        final double maxLoad = List.generate(loadValues.length, (i) => 
+            List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(max)
+        ).reduce(max);
+        final double minLoad = List.generate(loadValues.length, (i) => 
+            List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(min)
+        ).reduce(min);
+
+        const double opacity = 0.55;
+
+        final String textMin = "min = ${minLoad.toString().length <= 8 ? minLoad.toString() : minLoad.toStringAsFixed(6)}";
+        final String textMax = "max = ${maxLoad.toString().length <= 8 ? maxLoad.toString() : maxLoad.toStringAsFixed(6)}";
+        final Color minColor = withBrightness(Color.fromRGBO(0, 0, 255, 1), opacity);
+        final Color maxColor = withBrightness(Color.fromRGBO(255, 0, 0, 1), opacity);
+
+        const double distanceBetween = 30;
+        const double radius = 20;
+        final double rectX = -0.66 * window.center.dx;
+
+        final double rectMinY = window.center.dy - distanceBetween;
+        final double rectMaxY = window.center.dy + distanceBetween;
+
+        final Rect rectMin = Rect.fromCircle(center: Offset(rectX, rectMinY), radius: radius);
+        final Rect rectMax = Rect.fromCircle(center: Offset(rectX, rectMaxY), radius: radius);
+
+        painter.setPaint(color: minColor, width: 1);
+        painter.drawRect(window, rectMin);
+        painter.setPaint(color: maxColor, width: 1);
+        painter.drawRect(window, rectMax);
+
+        painter.setPaintStroke(color: Colors.black, width: 4);
+        painter.drawRectStroke(window, rectMin);
+        painter.drawRectStroke(window, rectMax);
+
+        painter.drawText(
+            window: window,
+            text: textMin,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(rectX + radius * 2, rectMinY),
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+        painter.drawText(
+            window: window,
+            text: textMax,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(rectX + radius * 2, rectMaxY),
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawBeamHeatRect({
+        required Offset beamCenter,
+        required double width,
+        required double height,
+        required List<double> beamLoad,
+    }) {
+        if (!showHeatMap) return;
+
+        final Rect rect = Rect.fromCenter(center: beamCenter, width: width, height: height);
+        painter.setPaintStroke(color: Colors.black, width: 4);
+        painter.drawRectStroke(window, rect);
+
+        final double maxLoad = List.generate(beamLoad.length, (index) => beamLoad[index].abs()).reduce(max);
+
+        const double opacity = 0.55;
+        final List<Color> normalizedLoadToColors = List.generate(
+            beamLoad.length,
+            (index) {
+                final double colorValue = ((beamLoad[index] / maxLoad).abs()).clamp(0, 1);
+                final int r = (sin(twoPI * colorValue) * 255).toInt();
+                final int b = (cos(twoPI * colorValue) * 255).toInt();
+                return withBrightness(
+                    Color.fromRGBO(r, 0, b, 1),
+                    opacity,
+                );
+            }
+        );
+
+        final Gradient gradient = LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: normalizedLoadToColors,
+            tileMode: TileMode.clamp,
+        );
+
+        final Paint paint = Paint()..shader = gradient.createShader(rect);
+
+        painter.drawRectWithPaint(window, rect, paint);
     }
 
     void _drawBeamRect({
@@ -1454,17 +1624,17 @@ class ConstructionRenderer extends CustomPainter {
         painter.setPaint(color: Colors.black, width: 1.5);
         painter.drawLine(window, Offset(lengthCum, window.height), Offset(lengthCum + width, window.height));
 
-        const double fontSize = 18;
         painter.drawText(
             window: window,
             text: 'L = $beamLength',
-            fontSize: fontSize,
+            fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
-            textOffset: Offset(lengthCum + width / 2, window.height - fontSize),
+            textOffset: Offset(lengthCum + width / 2, window.height - labelsFontSize + 3),
             outlineColor: Colors.black,
             centerAlignX: true,
-            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
         );
 
         const double triangleStep = 20;
@@ -1487,29 +1657,33 @@ class ConstructionRenderer extends CustomPainter {
     void _drawBeamSeparator({
         required double lengthCum,
     }) {
+        final nodeSquareTop = Offset(lengthCum, 0.875 * window.height - circleRadius);
         painter.setPaint(color: Colors.black, width: 1.5);
-        painter.drawLine(window, Offset(lengthCum, window.center.dy), Offset(lengthCum, window.height));
+        painter.drawLine(window, Offset(lengthCum, window.center.dy), nodeSquareTop);
+
+        final nodeSquareBottom = Offset(lengthCum, 0.875 * window.height + circleRadius);
+        painter.setPaint(color: Colors.black, width: 1.5);
+        painter.drawLine(window, nodeSquareBottom, Offset(lengthCum, window.height));
     }
 
     void _drawBeamNumber({
         required String text,
         required Offset circlePos,
-        required double circleRadius,
     }) {
         painter.setPaintStroke(color: Colors.black, width: 1.5);
         painter.drawCircleStroke(window, circlePos, circleRadius);
 
-        const double fontSize = 18;
         painter.drawText(
             window: window,
             text: text,
-            fontSize: fontSize,
+            fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
-            textOffset: circlePos,
+            textOffset: circlePos + Offset(0, 3),
             outlineColor: Colors.black,
             centerAlignX: true,
             centerAlignY: true,
+            fontFamily: 'Gost',
         );
     }
 
@@ -1520,7 +1694,7 @@ class ConstructionRenderer extends CustomPainter {
         required double height,
     }) {
         final String textEA = 'A = ${beams[i].sectionArea}, E = ${beams[i].elasticity}';
-        final double textEALength = calcTextSize(textEA, TextStyle(fontSize: 20)).width - 10;
+        final double textEALength = calcTextSize(textEA, TextStyle(fontSize: labelsFontSize)).width - 5;
         final double pointerPosX = i != beams.length - 1 ? lengthCum + 30 : lengthCum + width - 30;
         final double pointerPosY = window.center.dy - height / 4;
         final double footnoteStartX = i != beams.length - 1 ? lengthCum + 60 : lengthCum + width - 60;
@@ -1538,11 +1712,13 @@ class ConstructionRenderer extends CustomPainter {
         painter.drawText(
             window: window,
             text: textEA,
-            fontSize: 18,
+            fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
-            textOffset: Offset(i != beams.length - 1 ? footnoteStartX : footnoteEndX, footnoteY - 24),
+            textOffset: Offset(i != beams.length - 1 ? footnoteStartX : footnoteEndX, footnoteY - 22),
             outlineColor: Colors.black,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
         );
     }
 
@@ -1551,17 +1727,18 @@ class ConstructionRenderer extends CustomPainter {
         required double beamCenterX,
         required double height,
     }) {
-        const double fontSize = 18;
         painter.drawText(
             window: window,
             text: 'q = $text',
-            fontSize: fontSize,
+            fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
             textOffset: Offset(beamCenterX, window.center.dy - height / 4),
             outlineColor: Colors.black,
             centerAlignX: true,
             centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
         );
     }
 
@@ -1602,23 +1779,22 @@ class ConstructionRenderer extends CustomPainter {
     void _drawNodeSquare({
         required String text,
         required double lengthCum,
-        required double circleRadius,
     }) {
-        final nodeSquaresPos = Offset(lengthCum, 0.875 * window.height);
-        painter.setPaint(color: Colors.white);
-        painter.drawRect(window, Rect.fromCircle(center: nodeSquaresPos, radius: circleRadius));
+        final nodeSquaresPos = Offset(lengthCum - 4, 0.875 * window.height);
         painter.setPaintStroke(color: Colors.black, width: 1.5);
         painter.drawRectStroke(window, Rect.fromCircle(center: nodeSquaresPos, radius: circleRadius));
         painter.drawText(
             window: window,
             text: text,
-            fontSize: 18,
+            fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
-            textOffset: nodeSquaresPos,
+            textOffset: nodeSquaresPos + Offset(-3, 3),
             outlineColor: Colors.black,
             centerAlignX: true,
             centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
         );
     }
 
@@ -1673,10 +1849,10 @@ class ConstructionRenderer extends CustomPainter {
         painter.drawText(
             window: window,
             text: text,
-            fontSize: 18,
+            fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
-            textOffset: Offset(lengthCum + arrowLength + triangleStep, window.center.dy - triangleHeight - 15),
+            textOffset: Offset(lengthCum + arrowLength / 2 - 2 * flip, window.center.dy - triangleHeight - 6),
             outlineColor: Colors.black,
             centerAlignX: true,
             centerAlignY: true,
@@ -1687,13 +1863,11 @@ class ConstructionRenderer extends CustomPainter {
     void paint(Canvas canvas, Size size) {
         window.init(canvas, size);
 
-        final lengthsSum = _lengthsSum(beams);
-        final maxBeamRectWidth = window.width / lengthsSum;
+        final double lengthsSum = _lengthsSum(beams);
+        final double maxBeamRectWidth = window.width / lengthsSum;
 
-        final maxSectionArea = _maxSectionArea(beams);
-        final maxBeamRectHeight = window.center.dy / maxSectionArea;
-
-        const double circleRadius = 18;
+        final double maxSectionArea = List.generate(beams.length, (index) => beams[index].sectionArea).reduce(max);
+        final double maxBeamRectHeight = window.center.dy / maxSectionArea;
 
         double lengthCum = 0;
         for (int i = 0; i < beams.length; i++) {
@@ -1702,10 +1876,11 @@ class ConstructionRenderer extends CustomPainter {
             final double beamCenterX = lengthCum + beamWidth / 2;
             final Offset beamCenter = Offset(beamCenterX, window.center.dy);
 
+            if (showHeatMap) _drawBeamHeatRect(beamCenter: beamCenter, width: beamWidth, height: beamHeight, beamLoad: loadValues![i]);
             _drawBeamRect(beamCenter: beamCenter, width: beamWidth, height: beamHeight);
             _drawLength(beamLength: beams[i].length, lengthCum: lengthCum, width: beamWidth);
             _drawBeamSeparator(lengthCum: lengthCum);
-            _drawBeamNumber(text: '${i+1}', circlePos: Offset(beamCenterX, 0.125 * window.height), circleRadius: circleRadius);
+            _drawBeamNumber(text: '${i+1}', circlePos: Offset(beamCenterX, 0.125 * window.height));
             _drawElasticityAndAreaFootnote(i: i, lengthCum: lengthCum, width: beamWidth, height: beamHeight);
 
             if (beams[i].force.dx != 0) {
@@ -1716,18 +1891,18 @@ class ConstructionRenderer extends CustomPainter {
                 _drawBeamForceArrows(lengthCum: lengthCum, width: beamWidth, leftForce: leftForce, rightForce: rightForce, isPositive: beams[i].force.dx >= 0);
             }
 
-            if (nodes[i].force.dx != 0) {
-                _drawNodeForceWithArrow(text: 'F = ${nodes[i].force.dx}', lengthCum: lengthCum, isPositive: nodes[i].force.dx >= 0);
-            }
+            if (nodes[i].force.dx != 0) _drawNodeForceWithArrow(text: 'F = ${nodes[i].force.dx}', lengthCum: lengthCum, isPositive: nodes[i].force.dx >= 0);
 
-            _drawNodeSquare(text: '${i+1}', lengthCum: lengthCum, circleRadius: circleRadius);
+            _drawNodeSquare(text: '${i+1}', lengthCum: lengthCum);
 
             lengthCum += beamWidth;
         }
 
         _drawBeamSeparator(lengthCum: lengthCum);
-        _drawNodeSquare(text: '${beams.length + 1}', lengthCum: lengthCum, circleRadius: circleRadius);
+        _drawNodeSquare(text: '${beams.length + 1}', lengthCum: lengthCum);
         _drawNodeFixators();
+
+        _drawLegend();
     }
 
     @override
@@ -1759,11 +1934,9 @@ class Calculation {
     double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;
 
     bool isElementsValid(List<Beam> beams) {
-        return true;
-
-        // TODO: fix bug: always return false (skip for loop)
-        /*
         if (beams.isNotEmpty) { return true; }
+        return false;
+        /*
         for (final b in beams) {
             if (b.start.fixator != NodeFixator.disabled || b.end.fixator != NodeFixator.disabled) { return true; }
         }
@@ -1801,9 +1974,6 @@ class Calculation {
             matrix[beamsLength][beamsLength - 1] = 0;
         }
 
-        print("A: ");
-        print(matrix);
-
         return matrix;
     }
 
@@ -1815,22 +1985,15 @@ class Calculation {
         matrix.add(beams.first.start.fixator == NodeFixator.disabled ?
             Array([-q(beams.first.force.dx, beams.first.length) + beams.first.start.force.dx])
             : Array([0]));
-        print(matrix);
 
         for (int i = 1; i < beamsLength; i++) {
             matrix.add(Array([-q(beams[i - 1].force.dx, beams[i - 1].length) - q(beams[i].force.dx, beams[i].length) + beams[i].start.force.dx]));
         }
 
-        print(matrix);
-
         matrix.add(beams.last.end.fixator == NodeFixator.disabled ?
             Array([-q(beams.last.force.dx, beams.last.length) + beams.last.end.force.dx])
             : Array([0]));
 
-        print(matrix);
-
-        print("B matrix:");
-        print(matrix);
         return matrix;
     }
 
@@ -1839,13 +2002,11 @@ class Calculation {
             final a = _getMatrixA(beams);
             final b = _getMatrixB(beams);
             final deltas = matrixSolve(a, b).getColumn(0);
-            print("Deltas:");
-            print(deltas);
             return deltas != null ? deltas.toList() : [];
         } catch (e) {
             print(e);
-            return [];
         }
+        return [];
     }
 
     double longitudForce(
@@ -1866,12 +2027,11 @@ class Calculation {
                 longitudForces.add(longitudForce(beams[i], deltas[i], deltas[i + 1], beams[i].length));
             }
 
-            print(longitudForces);
             return longitudForces;
         } catch (e) {
             print(e);
-            return [];
         }
+        return [];
     }
 
     double normalTension(double longitudForce, double sectionArea) {
@@ -1892,8 +2052,8 @@ class Calculation {
             return normalTensions;
         } catch(e) {
             print(e);
-            return [];
         }
+        return [];
     }
 
     double movement(
@@ -1917,11 +2077,10 @@ class Calculation {
                 movements.add(movement(beams[i], deltas[i], deltas[i + 1], beams[i].length));
             }
 
-            print(movements);
             return movements;
         } catch (e) {
             print(e);
-            return [];
         }
+        return [];
     }
 }

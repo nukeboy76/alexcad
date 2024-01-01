@@ -169,7 +169,7 @@ class AppWidgetState extends State<AppWidget> {
                                                             onPointerUp: _handlePointerUp,
                                                             onPointerDown: _handlePointerDown,
                                                             onPointerMove: _handlePointerMove,
-                                                            onPointerSignal: (pointerSignal) { 
+                                                            onPointerSignal: (pointerSignal) {
                                                                 if(pointerSignal is PointerScrollEvent) {
                                                                     _handlePointerScroll(pointerSignal);
                                                                 }
@@ -179,7 +179,6 @@ class AppWidgetState extends State<AppWidget> {
                                                                 height: height,
                                                                 color: Colors.white,
                                                                 child: CustomPaint(
-                                                                    //size: Size.infinite,
                                                                     painter: AppWidgetRenderer(
                                                                         cad: this,
                                                                     ),
@@ -274,8 +273,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
         String nodesToJson = jsonEncode(widget.editor.nodes);
         String beamsToJson = jsonEncode(widget.editor.beams);
 
-        String jsonEditorData = "{\"nodes\":$nodesToJson,\"beams\":$beamsToJson}";
-        return jsonEditorData;
+        return "{\"nodes\":$nodesToJson,\"beams\":$beamsToJson}";
     }
 
     void _jsonToEditor(dynamic json) {
@@ -371,7 +369,25 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                     SizedBox(width: spaceRight),
                     TextButton(
                         style: TextButton.styleFrom(
-                            backgroundColor: pinkColor.lighter(colorScale),
+                            backgroundColor: cianColor.darker(0.3),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(edgeInsets),
+                            textStyle: const TextStyle(fontSize: fontSize),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(roundness),
+                            ),
+                        ),
+                        onPressed: () {
+                            setState(() {
+                                _startNew();
+                            });
+                        },
+                        child: const Text('New'),
+                    ),
+                    SizedBox(width: spaceBetween * 3),
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: purpleColor.lighter(colorScale),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.all(edgeInsets),
                             textStyle: const TextStyle(fontSize: fontSize),
@@ -425,20 +441,20 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                     SizedBox(width: spaceBetween * 3),
                     TextButton(
                         style: TextButton.styleFrom(
-                            backgroundColor: cianColor.darker(0.3),
+                            backgroundColor: pinkColor.lighter(colorScale),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.all(edgeInsets),
-                            textStyle: const TextStyle(fontSize: fontSize),
+                            textStyle: const TextStyle(fontSize: fontSize * 1.2),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(roundness),
                             ),
                         ),
                         onPressed: () {
                             setState(() {
-                                _startNew();
+                                //_saveFileAs();
                             });
                         },
-                        child: const Text('New'),
+                        child: const Text('?'),
                     ),
                 ],
             ),
