@@ -10,6 +10,7 @@ import 'input.dart';
 import 'painter.dart';
 import 'types.dart';
 import 'utils/utils.dart';
+import 'utils/colors.dart';
 import 'window.dart';
 
 
@@ -53,11 +54,28 @@ class _InspectorState extends State<Inspector> {
                 height: widget.height,
                 color: widget.color,
                 child: ListView(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(4),
                     children: [
-                        Text(
-                            widget.title,
-                            textAlign: TextAlign.center,
+                        Container(
+                            alignment: Alignment.center,
+                            height: 46.666,
+                            margin: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                                color: purpleColor.lighter(0.8),
+                                border: Border.all(
+                                    color: purpleColor.lighter(0.7),
+                                ),
+                                borderRadius: BorderRadius.all(Radius.circular(10)),
+                            ),
+                            child: Text(
+                                widget.title,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: purpleColor.darker(0.5),
+                                ), 
+                            ),
                         ),
                         selectedElementsLength != 1 ? Row() : selectedIsBeam ?
                             BeamWidget(
@@ -87,7 +105,7 @@ class BeamWidget extends StatefulWidget {
     BeamWidget({
         super.key,
         required this.beam,
-        this.title = "Beam",
+        this.title = "[Beam]",
         required this.onChange,
     });
 
@@ -111,7 +129,27 @@ class _BeamWidgetState extends State<BeamWidget> {
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-                Text(widget.title),
+                Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(4),
+                    margin: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                        color: purpleColor.lighter(0.7),
+                        border: Border.all(
+                            color: purpleColor.lighter(0.6),
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: purpleColor.darker(0.5),
+                        ), 
+                    ),
+                ),
                 NodeWidget(
                     onChange: () {
                         setState(() {
@@ -130,7 +168,48 @@ class _BeamWidgetState extends State<BeamWidget> {
                     title: "End node",
                     node: widget.beam.end,
                 ),
-                Text("Beam parameters"),
+                Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(4),
+                    margin: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                        color: purpleColor.lighter(0.8),
+                        border: Border.all(
+                            color: purpleColor.lighter(0.7),
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Text(
+                        "Beam parameters",
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: purpleColor.darker(0.5),
+                        ),
+                    ),
+                ),
+                Container(
+                    padding: const EdgeInsets.all(2),
+                    margin: const EdgeInsets.all(2),
+                    child: Row(
+                        children: [
+                            Text(
+                                "Length",
+                                style: TextStyle(
+                                    color: purpleColor.darker(0.5),
+                                ),
+                            ),
+                            Spacer(),
+                            Text(
+                                "${widget.beam.length}",
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    color: purpleColor.darker(0.5),
+                                ),
+                            )
+                        ]
+                    ),
+                ),
                 OffsetWidget(
                     onChange: (value) {
                         setState(() {
@@ -142,13 +221,6 @@ class _BeamWidgetState extends State<BeamWidget> {
                     title: "Force",
                     labelX: "Fx",
                     labelY: "Fy",
-                ),
-                Row(
-                    children: [
-                        Text("Length"),
-                        Spacer(),
-                        Text("${widget.beam.length}")
-                    ]
                 ),
                 SingleValueWidget(
                     onChange: (value) {
@@ -194,7 +266,7 @@ class NodeWidget extends StatefulWidget {
         super.key,
         required this.onChange,
         required this.node,
-        this.title = "Node",
+        this.title = "[Node]",
     });
 
     final onChange;
@@ -220,9 +292,24 @@ class _NodeWidgetState extends State<NodeWidget> {
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-                Text(
-                    widget.title,
-                    textAlign: TextAlign.center,
+                Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(4),
+                    margin: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                        color: widget.title == "[Node]" ? purpleColor.lighter(0.7) : purpleColor.lighter(0.8),
+                        border: Border.all(color: widget.title == "[Node]" ? purpleColor.lighter(0.6) : purpleColor.lighter(0.7)),
+                        borderRadius: BorderRadius.all(Radius.circular(10))
+                    ),
+                    child: Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: purpleColor.darker(0.5),
+                        ),
+                    ),
                 ),
                 OffsetWidget(
                     onChange: (value) {
@@ -244,7 +331,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                         });
                     },
                     offset: widget.node.force,
-                    title: "Force",
+                    title: "Force     ",
                     labelX: "Fx",
                     labelY: "Fy",
                 ),
@@ -259,38 +346,47 @@ class _NodeWidgetState extends State<NodeWidget> {
                     title: "Torque force",
                     label: "F",
                 ),
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                        Flexible(
-                            child: Text("Node fixator"),
-                        ),
-                        Flexible(
-                            child: DropdownMenu<NodeFixator>(
-                                initialSelection: widget.node.fixator,
-                                controller: _fixatorController,
-                                requestFocusOnTap: false,
-                                onSelected: (value) {
-                                    setState(() {
-                                        widget.onChange();
-                                        widget.node.fixator = value!;
-                                    });
-                                },
-                                dropdownMenuEntries: NodeFixator.values
-                                        .map<DropdownMenuEntry<NodeFixator>>(
-                                                (NodeFixator nodeFixator) {
-                                    return DropdownMenuEntry<NodeFixator>(
-                                        value: nodeFixator,
-                                        label: nodeFixator.name,
-                                        enabled: true,
-                                        style: MenuItemButton.styleFrom(
-                                            foregroundColor: cianColor.darker(0.5),
-                                        ),
-                                    );
-                                }).toList(),
+                Container(
+                    padding: const EdgeInsets.all(2),
+                    margin: const EdgeInsets.all(2),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                            Flexible(
+                                child: Text(
+                                    "Node fixator",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: purpleColor.darker(0.5),
+                                    ),
+                                ),
                             ),
-                        ),
-                    ],
+                            Flexible(
+                                child: DropdownMenu<NodeFixator>(
+                                    initialSelection: widget.node.fixator,
+                                    controller: _fixatorController,
+                                    requestFocusOnTap: false,
+                                    onSelected: (value) {
+                                        setState(() {
+                                            widget.onChange();
+                                            widget.node.fixator = value!;
+                                        });
+                                    },
+                                    dropdownMenuEntries: NodeFixator.values.map<DropdownMenuEntry<NodeFixator>>(
+                                        (NodeFixator nodeFixator) {
+                                        return DropdownMenuEntry<NodeFixator>(
+                                            value: nodeFixator,
+                                            label: nodeFixator.name,
+                                            enabled: true,
+                                            style: MenuItemButton.styleFrom(
+                                                foregroundColor: cianColor.darker(0.5),
+                                            ),
+                                        );
+                                    }).toList(),
+                                ),
+                            ),
+                        ],
+                    ),
                 ),
             ],
         );
@@ -339,50 +435,64 @@ class _OffsetWidgetState extends State<OffsetWidget> {
 
     @override
     Widget build(BuildContext context) {
-        return Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                        Flexible(
-                            child: Text(
-                                widget.title,
+        return Container(
+            padding: const EdgeInsets.all(2),
+            margin: const EdgeInsets.all(2),
+            alignment: Alignment.bottomCenter,
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                            Flexible(
+                                child: Column(
+                                    children: [
+                                        SizedBox(height: 16.5),
+                                        Text(
+                                            widget.title,
+                                            style: TextStyle(
+                                                color: purpleColor.darker(0.5),
+                                            ),
+                                        ),
+                                    ],
+                                ),
                             ),
-                        ),
-                        Flexible(
-                            child: TextField(
-                                controller: _controllerX,
-                                decoration: InputDecoration(labelText: widget.labelX),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: <TextInputFormatter>[
-                                    formatterX,
-                                ],
-                                onChanged: (value) {
-                                    setState(() {
-                                        widget.onChange(Offset(double.parse(value), widget.offset.dy));
-                                    });
-                                }
+                            Flexible(
+                                child: TextField(
+                                    textAlign: TextAlign.justify,
+                                    controller: _controllerX,
+                                    decoration: InputDecoration(labelText: widget.labelX),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: <TextInputFormatter>[
+                                        formatterX,
+                                    ],
+                                    onChanged: (value) {
+                                        setState(() {
+                                            widget.onChange(Offset(double.parse(value), widget.offset.dy));
+                                        });
+                                    }
+                                ),
                             ),
-                        ),
-                        Flexible(
-                            child: TextField(
-                                controller: _controllerY,
-                                decoration: InputDecoration(labelText: widget.labelY),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: <TextInputFormatter>[
-                                    formatterY,
-                                ],
-                                onChanged: (value) {
-                                    setState(() { 
-                                        widget.onChange(Offset(widget.offset.dx, double.parse(value)));
-                                    });
-                                },
+                            Flexible(
+                                child: TextField(
+                                    controller: _controllerY,
+                                    decoration: InputDecoration(labelText: widget.labelY),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: <TextInputFormatter>[
+                                        formatterY,
+                                    ],
+                                    onChanged: (value) {
+                                        setState(() { 
+                                            widget.onChange(Offset(widget.offset.dx, double.parse(value)));
+                                        });
+                                    },
+                                ),
                             ),
-                        ),
-                    ],
-                ),
-            ],
+                        ],
+                    ),
+                ],
+            ),
         );
     }
 }
@@ -426,37 +536,46 @@ class _SingleValueWidgetState extends State<SingleValueWidget> {
 
     @override
     Widget build(BuildContext context) {
-        return Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                        Flexible(
-                            child: Text(
-                                widget.title,
-                            ),
+        return Container(
+            padding: const EdgeInsets.all(2),
+            margin: const EdgeInsets.all(2),
+            height: 66,
+            alignment: Alignment.center,
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                    Flexible(
+                        child: Column(
+                            children: [
+                                SizedBox(height: 28),
+                                Text(
+                                    widget.title,
+                                    style: TextStyle(
+                                        color: purpleColor.darker(0.5),
+                                    ),
+                                ),
+                            ],
                         ),
-                        Flexible(
-                            child: TextFormField(
-                                autofocus: true,
-                                controller: _controller,
-                                decoration: InputDecoration(labelText: widget.label),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: <TextInputFormatter>[
-                                    widget.formatter,
-                                ],
-                                onChanged: (value) {
-                                    setState(() {
-                                        print(double.parse(value));
-                                        widget.onChange(double.parse(value));
-                                    });
-                                },
-                            ),
+                    ),
+                    Flexible(
+                        child: TextFormField(
+                            autofocus: true,
+                            controller: _controller,
+                            decoration: InputDecoration(labelText: widget.label),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                                widget.formatter,
+                            ],
+                            onChanged: (value) {
+                                setState(() {
+                                    print(double.parse(value));
+                                    widget.onChange(double.parse(value));
+                                });
+                            },
                         ),
-                    ],
-                ),
-            ],
+                    ),
+                ],
+            ),
         );
     }
 }

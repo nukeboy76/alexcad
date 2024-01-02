@@ -39,6 +39,8 @@ abstract class EditorView {
     final editorElement;
     void render(Window window, Painter painter) {}
     void renderUI(Window window, Painter painter) {}
+    void renderOverlay(Window window, Painter painter) {}
+    void renderOverlayUI(Window window, Painter painter) {}
     bool click(Window window, Offset mouseWorldClick) => true;
     bool boxSelect(BoxSelection selection) => true;
     void refreshCanvasData() {}
@@ -150,7 +152,34 @@ class NodeEditorView implements EditorView {
     @override
     final editorElement;
 
-    void drawForceArrows(Window window, Painter painter) {
+    @override
+    void render(Window window, Painter painter) {}
+
+    @override
+    void renderOverlay(Window window, Painter painter) {
+        if (editorElement.fixator != NodeFixator.disabled) {
+            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.2) : Colors.grey.shade400);
+            painter.drawRect(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(editorElement.center),
+                    radius: fixatorRadius,
+                ),
+            );
+            painter.setPaintStroke(color: Colors.black, width: 2);
+            painter.drawRectStroke(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(editorElement.center),
+                    radius: fixatorRadius,
+                ),
+            );
+        }
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.4) : Colors.grey);
+        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
+    }
+
+    void _drawForceArrows(Window window, Painter painter) {
         if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
             final double arrowWidth = radius / 3;
             final double arrowLength = 40 / window.zoom;
@@ -229,25 +258,13 @@ class NodeEditorView implements EditorView {
         }
     }
 
-    @override
-    void render(Window window, Painter painter) {
-        if (editorElement.fixator != NodeFixator.disabled) {
-            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade400);
-            painter.drawRect(
-                window,
-                Rect.fromCircle(
-                    center: window.worldToScreen(editorElement.center),
-                    radius: fixatorRadius,
-                ),
-            );
-        }
-        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.3) : Colors.grey);
-        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
-    }
 
     @override
-    void renderUI(Window window, Painter painter) {
-        drawForceArrows(window, painter);
+    void renderUI(Window window, Painter painter) {}
+
+    @override
+    void renderOverlayUI(Window window, Painter painter) {
+        _drawForceArrows(window, painter);
     }
 
     @override
@@ -295,7 +312,6 @@ class Beam implements EditorElement {
     double elasticity;
     double tension;
     BeamSection section;
-
 
     double get rotation { 
         final delta = Offset(end.position.dx - start.position.dx, end.position.dy - start.position.dy);
@@ -381,29 +397,49 @@ class BeamEditorView implements EditorView {
         painter.drawQuadStroke(window, a, b, c, d);
     }
 
-    void drawForceArrows(Window window, Painter painter) {
-        const double tScale = 0.66;
+    @override
+    void renderOverlay(Window window, Painter painter) {}
 
-        painter.setPaint(color: pinkColor.color);
+    @override
+    void renderOverlayUI(Window window, Painter painter) {
+        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
+            painter.drawText(
+                window: window,
+                text: '[${editorElement.force.dx}; ${editorElement.force.dy}]',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: const Color(0x00ffffff),
+                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
+                outline: true,
+                outlineSize: 1.25,
+                centerAlignX: true,
+                centerAlignY: true,
+            );
+        }
+    }
+
+    void _drawForceArrows(Window window, Painter painter) {
         if (editorElement.force.dx != 0) {
             final bool xForcePositive = editorElement.force.dx > 0;
 
             Offset beamVec = xForcePositive ? editorElement.end.position - editorElement.start.position :
                                               editorElement.start.position - editorElement.end.position;
 
-            Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
-            Offset gapStep = triangleStep;
+            final double triangleScale = 0.66;
+            final Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
+            final Offset gapStep = triangleStep;
 
-            Offset aPos = xForcePositive ? c - (c - editorElement.end.position) / tScale :
-                                           a - (a - editorElement.start.position) / tScale;
-            Offset bPos = xForcePositive ? d - (d - editorElement.end.position) / tScale :
-                                           b - (b - editorElement.start.position) / tScale;
+            Offset aPos = xForcePositive ? c - (c - editorElement.end.position) / triangleScale :
+                                           a - (a - editorElement.start.position) / triangleScale;
+            Offset bPos = xForcePositive ? d - (d - editorElement.end.position) / triangleScale :
+                                           b - (b - editorElement.start.position) / triangleScale;
             Offset hPos = xForcePositive ? editorElement.end.position + triangleStep :
                                            editorElement.start.position + triangleStep;
 
             double length = 0;
             double maxLength = editorElement.length - triangleStep.distance;
 
+            painter.setPaint(color: pinkColor.color);
             while (length <= maxLength) {
                 Offset aPosNew = aPos - triangleStep;
                 Offset bPosNew = bPos - triangleStep;
@@ -425,7 +461,7 @@ class BeamEditorView implements EditorView {
         }
     }
 
-    void drawBeamCenter(Window window, Painter painter) {
+    void _drawBeamCenter(Window window, Painter painter) {
         var beamCenterOnScreen = window.worldToScreen(editorElement.center);
         painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade900);
         for (final d in directions) {
@@ -435,23 +471,8 @@ class BeamEditorView implements EditorView {
 
     @override
     void renderUI(Window window, Painter painter) {
-        drawForceArrows(window, painter);
-        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
-            painter.drawText(
-                window: window,
-                text: '[${editorElement.force.dx}; ${editorElement.force.dy}]',
-                fontSize: forceLabelFontSize,
-                textColor: Colors.black,
-                bgColor: const Color(0x00ffffff),
-                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
-                outline: true,
-                outlineSize: 1.25,
-                centerAlignX: true,
-                centerAlignY: true,
-            );
-        }
-
-        drawBeamCenter(window, painter);
+        _drawForceArrows(window, painter);
+        _drawBeamCenter(window, painter);
     }
 
     @override
@@ -667,6 +688,21 @@ class Editor {
         return list;
     }
 
+    void processInput(Window window, Input input) {
+        handleKeyboard(input);
+        selectionState.processInput(this, window, input);
+    }
+
+    void render(Window window, Painter painter, Input input) {
+        grid.render(window, painter);
+        _drawEditorElements(window, painter);
+        if (elementsUIVisible) _drawEditorElementsUI(window, painter);
+        _drawEditorElementsOverlay(window, painter);
+        if (elementsUIVisible) _drawEditorElementsOverlayUI(window, painter);
+        selectionState.drawBoxSelection(window, painter, input);
+        drawDragBox(window, painter, input);
+    }
+
     void clearAllElements() {
         elements = [];
         Node.resetNodeIndex();
@@ -742,15 +778,22 @@ class Editor {
         resetSelectionState();
     }
 
-    void processInput(Window window, Input input) {
-        handleKeyboard(input);
-        selectionState.processInput(this, window, input);
-    }
-
-    void drawEditorElements(Window window, Painter painter) {
+    void _drawEditorElements(Window window, Painter painter) {
         for (final e in elements) {
             e.editorView.refreshCanvasData();
             e.editorView.render(window, painter);
+        }
+    }
+
+    void _drawEditorElementsOverlay(Window window, Painter painter) {
+        for (final e in elements) {
+            e.editorView.renderOverlay(window, painter);
+        }
+    }
+
+    void _drawEditorElementsOverlayUI(Window window, Painter painter) {
+        for (final e in elements) {
+            e.editorView.renderOverlayUI(window, painter);
         }
     }
 
@@ -811,18 +854,10 @@ class Editor {
         }
     }
 
-    void drawEditorElementsUI(Window window, Painter painter) {
+    void _drawEditorElementsUI(Window window, Painter painter) {
         for (final e in elements) {
             e.editorView.renderUI(window, painter);
         }
-    }
-
-    void render(Window window, Painter painter, Input input) {
-        grid.render(window, painter);
-        drawEditorElements(window, painter);
-        if (elementsUIVisible) drawEditorElementsUI(window, painter);
-        selectionState.drawBoxSelection(window, painter, input);
-        drawDragBox(window, painter, input);
     }
 }
 
@@ -1245,6 +1280,11 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     static const double darkness = 0.2;
     static const double iconSize = 32;
     static const double roundness = 8;
+    static const List<Widget> calcTypeLabels = <Widget>[
+        Text('Ux'),
+        Text('Nx'),
+        Text('σx'),
+    ];
 
     final Calculation calc = Calculation();
 
@@ -1285,10 +1325,13 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
         List<List<double>> longitudForces = [];
 
         for (int i = 0; i < beams.length; i++) {
+            final double length = beams[i].length;
+            final double step = length / 200;
             List<double> beamLongitudForces = [];
 
-            beamLongitudForces.add(calc.longitudForce(beams[i], deltas[i], deltas[i + 1], 0.0));
-            beamLongitudForces.add(calc.longitudForce(beams[i], deltas[i], deltas[i + 1], beams[i].length));
+            for (double j = 0; j < length + 1e-8; j += step) {
+                beamLongitudForces.add(calc.longitudForce(beams[i], deltas[i], deltas[i + 1], j));
+            }
 
             longitudForces.add(beamLongitudForces);
         }
@@ -1296,15 +1339,14 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
         return longitudForces;
     }
 
-    List<List<double>> _detailedNormalTensions(List<Beam> beams, List<double> longitudForces) {
+    List<List<double>> _detailedNormalTensions(List<Beam> beams, List<List<double>> longitudForces) {
         List<List<double>> normalTensions = [];
 
-        for (int i = 0; i < beams.length; i++) {
+        for (int i = 0; i < longitudForces.length; i++) {
             List<double> beamNormalTensions = [];
 
-            const int c = 2;
-            for (int j = 0; j < c; j++) {
-                beamNormalTensions.add(calc.normalTension(longitudForces[i * c + j], beams[i].sectionArea));
+            for (int j = 0; j < longitudForces[i].length; j++) {
+                beamNormalTensions.add(calc.normalTension(longitudForces[i][j], beams[i].sectionArea));
             }
 
             normalTensions.add(beamNormalTensions);
@@ -1328,22 +1370,13 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
         final List<double> normalTensions = calc.getNormalTensions(beams, longitudForces);
 
         final String deltasStr = deltas != null ? deltas.toString() : "";
-        final String longitudForcesStr = longitudForces != null ? longitudForces.toString() : "";
-        final String movementsStr = movements != null ? movements.toString() : "";
-        final String normalTensionsStr = normalTensions != null ? normalTensions.toString() : "";
+
 
         List<List<double>>? values = [];
-
-        const List<Widget> calcTypeLabels = <Widget>[
-          Text('Nx'),
-          Text('Ux'),
-          Text('σx'),
-        ];
-
         if (_showHeatMap) {
             if (_heatMapType[0]) values = _detailedMovements(beams, deltas);
             else if (_heatMapType[1]) values = _detailedLongitudForces(beams, deltas);
-            else if (_heatMapType[2]) values = _detailedNormalTensions(beams, longitudForces);
+            else if (_heatMapType[2]) values = _detailedNormalTensions(beams, _detailedLongitudForces(beams, deltas));
         }
 
         final lengths = _lengths(beams);
@@ -1384,8 +1417,10 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                                 style: TextStyle(
                                     fontSize: 25,
                                     fontFamily: 'Gost',
+                                    fontWeight: FontWeight.bold,
                                 ),
                             ),
+                            SizedBox(height: 12),
                             Text(
                                 "Δ = $deltasStr",
                                 style: TextStyle(
@@ -1401,8 +1436,8 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                                         flex: 2,
                                         fit: FlexFit.tight,
                                         child: Container(
-                                            width: widget.width! / 2,
-                                            height: (widget.height! / 2),
+                                            width: widget.width! / 1.5,
+                                            height: (widget.height! / 1.5),
                                             child: CustomPaint(
                                                 painter: ConstructionRenderer(
                                                     constructionWindow,
@@ -1494,7 +1529,7 @@ class ConstructionRenderer extends CustomPainter {
 
     Painter painter = Painter();
 
-    static const double nodeForceArrowLength = 80;
+    static const double nodeForceArrowLength = 100;
     static const double circleRadius = 18;
     static const double labelsFontSize = 24;
 
@@ -1626,7 +1661,7 @@ class ConstructionRenderer extends CustomPainter {
 
         painter.drawText(
             window: window,
-            text: 'L = $beamLength',
+            text: 'L = ${beamLength.toString().length >= 5 ? beamLength.toStringAsFixed(5) : beamLength.toString()}',
             fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
@@ -1856,6 +1891,8 @@ class ConstructionRenderer extends CustomPainter {
             outlineColor: Colors.black,
             centerAlignX: true,
             centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
         );
     }
 
@@ -1929,6 +1966,7 @@ class CalculationDiagramRenderer extends CustomPainter {
     @override
     bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
+
 
 class Calculation {
     double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;

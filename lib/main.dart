@@ -121,8 +121,6 @@ class AppWidgetState extends State<AppWidget> {
         super.initState();
     }
 
-    int inc = 0;
-
     @override
     Widget build(BuildContext context) {
         final double height = MediaQuery.of(context).size.height;
