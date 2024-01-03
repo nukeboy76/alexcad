@@ -71,6 +71,7 @@ class AppWidgetState extends State<AppWidget> {
     Painter painter = Painter();
 
     bool showCalcOverlay = false;
+    static bool isBeamSelectionMode = false;
 
     void init(Canvas canvas, Size size) {
         this.window.init(canvas, size);
@@ -152,6 +153,11 @@ class AppWidgetState extends State<AppWidget> {
                                                 showCalcOverlay = value;
                                             });
                                         },
+                                        changeSelectionMode: (value) {
+                                            setState(() {
+                                                isBeamSelectionMode = value;
+                                            });
+                                        }
                                     ),
                                     Stack(
                                         children: [

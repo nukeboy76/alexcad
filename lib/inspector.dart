@@ -364,6 +364,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                             Flexible(
                                 child: DropdownMenu<NodeFixator>(
                                     initialSelection: widget.node.fixator,
+
                                     controller: _fixatorController,
                                     requestFocusOnTap: false,
                                     onSelected: (value) {
@@ -379,7 +380,7 @@ class _NodeWidgetState extends State<NodeWidget> {
                                             label: nodeFixator.name,
                                             enabled: true,
                                             style: MenuItemButton.styleFrom(
-                                                foregroundColor: cianColor.darker(0.5),
+                                                foregroundColor: purpleColor.darker(0.5),
                                             ),
                                         );
                                     }).toList(),

@@ -12,6 +12,7 @@ import 'cad_colors.dart';
 import 'cad_icons.dart';
 import 'input.dart';
 import 'inspector.dart';
+import 'main.dart';
 import 'painter.dart';
 import 'types.dart';
 import 'utils/utils.dart';
@@ -536,7 +537,7 @@ class EditorInitialSelectionState implements EditorSelectionState {
 
         editor.selectedElements = [];
         final BoxSelection selection = input.boxSelectionWorld;
-        final list = editor.isBeamSelectionMode ? editor.beams : editor.nodes;
+        final list = AppWidgetState.isBeamSelectionMode ? editor.beams : editor.nodes;
 
         if (selection.start != selection.end) {
             for (final c in list) {
@@ -639,7 +640,6 @@ class Editor {
 
     Grid grid = Grid();
 
-    bool isBeamSelectionMode = true;
     bool elementsUIVisible = true;
     late EditorSelectionState selectionState;
 
@@ -977,12 +977,14 @@ class EditorBar extends StatefulWidget {
         this.width,
         this.height,
         this.onChange,
+        this.changeSelectionMode,
     });
 
     final Editor editor;
     final double? width;
     final double? height;
     final onChange;
+    final changeSelectionMode;
 
     @override
     State<EditorBar> createState() => _EditorBarState();
@@ -1025,7 +1027,7 @@ class _EditorBarState extends State<EditorBar> {
                                             for (int i = 0; i < _selectionMode.length; i++) {
                                                 _selectionMode[i] = i == index;
                                             }
-                                            widget.editor.isBeamSelectionMode = _selectionMode[0];
+                                            widget.changeSelectionMode(_isBeamSelectionMode);
                                         });
                                     },
                                     borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -1172,7 +1174,7 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
             return Container();
         }
         _visible = !widget.editor.selectedElements.isEmpty;
-        final isBeamSelectionMode = widget.editor.isBeamSelectionMode;
+        final isBeamSelectionMode = AppWidgetState.isBeamSelectionMode;
         return Container(
             width: widget.width,
             height: widget.height,
@@ -1533,6 +1535,14 @@ class ConstructionRenderer extends CustomPainter {
     static const double circleRadius = 18;
     static const double labelsFontSize = 24;
 
+    double get _minLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(min)
+    ).reduce(min);
+
+    double get _maxLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(max)
+    ).reduce(max);
+
     double _lengthsSum(List<Beam> beams) {
         double total = 0;
         for (final b in beams) {
@@ -1543,12 +1553,8 @@ class ConstructionRenderer extends CustomPainter {
 
     void _drawLegend() {
         if (!showHeatMap) return;
-        final double maxLoad = List.generate(loadValues.length, (i) => 
-            List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(max)
-        ).reduce(max);
-        final double minLoad = List.generate(loadValues.length, (i) => 
-            List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(min)
-        ).reduce(min);
+        final double maxLoad = _maxLoad;
+        final double minLoad = _minLoad;
 
         const double opacity = 0.55;
 
@@ -1600,6 +1606,18 @@ class ConstructionRenderer extends CustomPainter {
             fontFamily: 'Gost',
             fontStyle: FontStyle.italic,
         );
+        painter.drawText(
+            window: window,
+            text: '(abs)',
+            fontSize: labelsFontSize * 0.85,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(rectX + radius * 2, rectMinY - distanceBetween * 1.25),
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
     }
 
     void _drawBeamHeatRect({
@@ -1611,10 +1629,8 @@ class ConstructionRenderer extends CustomPainter {
         if (!showHeatMap) return;
 
         final Rect rect = Rect.fromCenter(center: beamCenter, width: width, height: height);
-        painter.setPaintStroke(color: Colors.black, width: 4);
-        painter.drawRectStroke(window, rect);
 
-        final double maxLoad = List.generate(beamLoad.length, (index) => beamLoad[index].abs()).reduce(max);
+        final double maxLoad = _maxLoad;
 
         const double opacity = 0.55;
         final List<Color> normalizedLoadToColors = List.generate(
@@ -1661,7 +1677,7 @@ class ConstructionRenderer extends CustomPainter {
 
         painter.drawText(
             window: window,
-            text: 'L = ${beamLength.toString().length >= 5 ? beamLength.toStringAsFixed(5) : beamLength.toString()}',
+            text: 'L=${beamLength.toString().length >= 5 ? beamLength.toStringAsFixed(5) : beamLength.toString()}',
             fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
@@ -1728,7 +1744,7 @@ class ConstructionRenderer extends CustomPainter {
         required double width,
         required double height,
     }) {
-        final String textEA = 'A = ${beams[i].sectionArea}, E = ${beams[i].elasticity}';
+        final String textEA = 'A=${beams[i].sectionArea}, E=${beams[i].elasticity}';
         final double textEALength = calcTextSize(textEA, TextStyle(fontSize: labelsFontSize)).width - 5;
         final double pointerPosX = i != beams.length - 1 ? lengthCum + 30 : lengthCum + width - 30;
         final double pointerPosY = window.center.dy - height / 4;
@@ -1764,7 +1780,7 @@ class ConstructionRenderer extends CustomPainter {
     }) {
         painter.drawText(
             window: window,
-            text: 'q = $text',
+            text: 'q=$text',
             fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
@@ -1815,7 +1831,7 @@ class ConstructionRenderer extends CustomPainter {
         required String text,
         required double lengthCum,
     }) {
-        final nodeSquaresPos = Offset(lengthCum - 4, 0.875 * window.height);
+        final nodeSquaresPos = Offset(lengthCum, 0.875 * window.height);
         painter.setPaintStroke(color: Colors.black, width: 1.5);
         painter.drawRectStroke(window, Rect.fromCircle(center: nodeSquaresPos, radius: circleRadius));
         painter.drawText(
@@ -1824,12 +1840,11 @@ class ConstructionRenderer extends CustomPainter {
             fontSize: labelsFontSize,
             textColor: Colors.black,
             bgColor: Color(0x00ffffff),
-            textOffset: nodeSquaresPos + Offset(-3, 3),
+            textOffset: nodeSquaresPos + Offset(0, 3),
             outlineColor: Colors.black,
             centerAlignX: true,
             centerAlignY: true,
             fontFamily: 'Gost',
-            fontStyle: FontStyle.italic,
         );
     }
 
@@ -1928,7 +1943,7 @@ class ConstructionRenderer extends CustomPainter {
                 _drawBeamForceArrows(lengthCum: lengthCum, width: beamWidth, leftForce: leftForce, rightForce: rightForce, isPositive: beams[i].force.dx >= 0);
             }
 
-            if (nodes[i].force.dx != 0) _drawNodeForceWithArrow(text: 'F = ${nodes[i].force.dx}', lengthCum: lengthCum, isPositive: nodes[i].force.dx >= 0);
+            if (nodes[i].force.dx != 0) _drawNodeForceWithArrow(text: 'F=${nodes[i].force.dx}', lengthCum: lengthCum, isPositive: nodes[i].force.dx >= 0);
 
             _drawNodeSquare(text: '${i+1}', lengthCum: lengthCum);
 
