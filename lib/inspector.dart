@@ -25,6 +25,7 @@ class Inspector extends StatefulWidget {
         this.height = 1080,
         this.title = "Inspector",
         this.child,
+        required this.visible,
         required this.update,
     });
 
@@ -34,6 +35,7 @@ class Inspector extends StatefulWidget {
     final double height;
     final String title;
     final Widget? child;
+    final bool visible;
     final update;
 
     @override
@@ -74,10 +76,19 @@ class _InspectorState extends State<Inspector> {
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
                                     color: purpleColor.darker(0.5),
-                                ), 
+                                ),
                             ),
                         ),
-                        selectedElementsLength != 1 ? Row() : selectedIsBeam ?
+                        !widget.visible ? Text(
+                            "You are in the calculation view mode",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: pinkColor.darker(0.25),
+                            ),
+                        ) : SizedBox.shrink(),
+                        !widget.visible || selectedElementsLength != 1 ? Row() : selectedIsBeam ?
                             BeamWidget(
                                 beam: widget.selectedElements[0],
                                 onChange: () { 

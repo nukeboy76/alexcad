@@ -1254,6 +1254,9 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
 }
 
 
+const double calcPrecision = 0.0025;
+
+
 class CalculationOverlay extends StatefulWidget {
     CalculationOverlay(
         this.editor, {
@@ -1283,8 +1286,8 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     static const double iconSize = 32;
     static const double roundness = 8;
     static const List<Widget> calcTypeLabels = <Widget>[
-        Text('Ux'),
         Text('Nx'),
+        Text('Ux'),
         Text('σx'),
     ];
 
@@ -1305,12 +1308,15 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     List<double> _beamForces(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].force.dx);
     List<double> _nodeForces(List<Beam> nodes) => List.generate(nodes.length, (i) => nodes[i].force.dx);
 
+    double _lengthsSum(List<Beam> beams) => _lengths(beams).reduce((a, b) => a + b);
+
     List<List<double>> _detailedMovements(List<Beam> beams, List<double> deltas) {
         List<List<double>> movements = [];
 
+        final double step = calcPrecision * _lengthsSum(beams);
+
         for (int i = 0; i < beams.length; i++) {
             final double length = beams[i].length;
-            final double step = length / 200;
             List<double> beamMovements = [];
 
             for (double j = 0; j < length + 1e-8; j += step) {
@@ -1326,9 +1332,10 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     List<List<double>> _detailedLongitudForces(List<Beam> beams, List<double> deltas) {
         List<List<double>> longitudForces = [];
 
+        final double step = calcPrecision * _lengthsSum(beams);
+
         for (int i = 0; i < beams.length; i++) {
             final double length = beams[i].length;
-            final double step = length / 200;
             List<double> beamLongitudForces = [];
 
             for (double j = 0; j < length + 1e-8; j += step) {
@@ -1373,12 +1380,15 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
 
         final String deltasStr = deltas != null ? deltas.toString() : "";
 
+        final detailedMovements = _detailedMovements(beams, deltas);
+        final detailedLongitudForces = _detailedLongitudForces(beams, deltas);
+        final detailedNormalTensions = _detailedNormalTensions(beams, detailedLongitudForces);
 
         List<List<double>>? values = [];
         if (_showHeatMap) {
-            if (_heatMapType[0]) values = _detailedMovements(beams, deltas);
-            else if (_heatMapType[1]) values = _detailedLongitudForces(beams, deltas);
-            else if (_heatMapType[2]) values = _detailedNormalTensions(beams, _detailedLongitudForces(beams, deltas));
+            if (_heatMapType[0]) values = detailedLongitudForces;
+            else if (_heatMapType[1]) values = detailedMovements;
+            else if (_heatMapType[2]) values = detailedNormalTensions;
         }
 
         final lengths = _lengths(beams);
@@ -1435,11 +1445,11 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                                 children: [
                                     Flexible(flex: 1, child: Container()),
                                     Flexible(
-                                        flex: 2,
+                                        flex: 4,
                                         fit: FlexFit.tight,
                                         child: Container(
-                                            width: widget.width! / 1.5,
-                                            height: (widget.height! / 1.5),
+                                            width: widget.width!,
+                                            height: widget.height! / 1.5,
                                             child: CustomPaint(
                                                 painter: ConstructionRenderer(
                                                     constructionWindow,
@@ -1502,8 +1512,63 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
                                     ),
                                 ],
                             ),
-                            Container(
-                                height: 20,
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Container(
+                                        width: widget.width! / 1.5,
+                                        height: widget.height! / 3,
+                                        child: CustomPaint(
+                                            painter: CalculationDiagramRenderer(
+                                                constructionWindow,
+                                                lengths: lengths,
+                                                loadValues: detailedLongitudForces,
+                                                legendLabel: "Nx",
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Container(
+                                        width: widget.width! / 1.5,
+                                        height: widget.height! / 3,
+                                        child: CustomPaint(
+                                            painter: CalculationDiagramRenderer(
+                                                constructionWindow,
+                                                lengths: lengths,
+                                                loadValues: detailedMovements,
+                                                legendLabel: "Ux",
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Container(
+                                        width: widget.width! / 1.5,
+                                        height: widget.height! / 3,
+                                        child: CustomPaint(
+                                            painter: CalculationDiagramRenderer(
+                                                constructionWindow,
+                                                lengths: lengths,
+                                                loadValues: detailedNormalTensions,
+                                                legendLabel: "σx",
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                children: [
+                                    Container(
+                                        height: widget.height! / 6,
+                                    ),
+                                ],
                             ),
                         ],
                     ),
@@ -1565,7 +1630,7 @@ class ConstructionRenderer extends CustomPainter {
 
         const double distanceBetween = 30;
         const double radius = 20;
-        final double rectX = -0.66 * window.center.dx;
+        final double rectX = -0.4 * window.center.dx;
 
         final double rectMinY = window.center.dy - distanceBetween;
         final double rectMaxY = window.center.dy + distanceBetween;
@@ -1966,16 +2031,165 @@ class CalculationDiagramRenderer extends CustomPainter {
     CalculationDiagramRenderer(
         this.window, {
         required this.lengths,
-        required this.values,
+        required this.loadValues,
+        required this.legendLabel,
     });
 
-    Window window;
-    List<double> lengths;
-    List<List<double>> values;
+    final Window window;
+    final List<double> lengths;
+    final List<List<double>> loadValues;
+    final String legendLabel;
+
+    final Painter painter = Painter();
+
+    static const double yScale = 1.5;
+    static const double labelsFontSize = 32;
+    static const double valuesFontSize = 24;
+
+    double get _minLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(min)
+    ).reduce(min);
+
+    double get _maxLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(max)
+    ).reduce(max);
+
+    double get _lengthsSum => lengths.reduce((a, b) => a + b);
+
+    void _drawLegend({required String label}) {
+        painter.drawText(
+            window: window,
+            text: label,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(-66, window.center.dy),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+
+        painter.drawText(
+            window: window,
+            text: "+",
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(-15, window.center.dy - 20),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+
+        painter.drawText(
+            window: window,
+            text: "-",
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(-15, window.center.dy + 20),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawValue({required String text, required Offset offset}) {
+        painter.drawText(
+            window: window,
+            text: text,
+            fontSize: valuesFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: offset,
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawCenterAxisX() {
+        painter.setPaint(color: Colors.black, width: 2);
+        painter.drawLine(window, Offset(0, window.center.dy), Offset(window.width, window.center.dy));
+    }
+
+    void _drawBeamSeparator({
+        required double lengthCum,
+    }) {
+        painter.setPaint(color: Colors.black, width: 1.5);
+        painter.drawLine(window, Offset(lengthCum, 0), Offset(lengthCum, window.height));
+    }
+
+    double _loadY(double maxY, double maxLoad, double load) => -load * maxY / maxLoad + maxY * yScale;
 
     @override
     void paint(Canvas canvas, Size size) {
+        window.init(canvas, size);
+        _drawLegend(label: legendLabel);
+        _drawCenterAxisX();
 
+        final double lengthsSum = _lengthsSum;
+        final double maxY = window.center.dy / yScale;
+        final double maxBeamWidth = window.width / lengthsSum;
+        final double minLoad = _minLoad;
+        final double maxLoad = _maxLoad;
+
+        double lengthCum = 0;
+
+        Offset point = Offset(0, _loadY(maxY, maxLoad, loadValues[0][0]));
+        for (int i = 0; i < loadValues.length; i++) {
+            print(loadValues[i].length);
+
+            _drawValue(
+                text: loadValues[i][0].toString().length > 4 ? loadValues[i][0].toStringAsFixed(4) : loadValues[i][0].toString(),
+                offset: Offset(point.dx + 3.5, window.height * 0.9),
+            );
+
+            final double beamWidth = lengths[i] * maxBeamWidth;
+            final double beamCenterX = lengthCum + beamWidth / 2;
+            final Offset beamCenter = Offset(beamCenterX, window.center.dy);
+
+            _drawBeamSeparator(lengthCum: lengthCum);
+
+            final double step = calcPrecision * maxBeamWidth * _lengthsSum;
+
+            double loadX = 0;
+
+            painter.setPaint(color: Colors.black, width: 2);
+            for (int j = 0; j < loadValues[i].length; j++) {
+                final Offset pointNew = Offset(lengthCum + loadX, _loadY(maxY, maxLoad, loadValues[i][j]));
+                painter.drawLine(window, point, pointNew);
+
+                if (j % (4) == 0) painter.drawLine(window, pointNew, Offset(pointNew.dx, window.center.dy));
+
+                point = pointNew;
+                loadX += step;
+            }
+
+            final String lastValueLabel = loadValues[i].last.toString().length > 4 ? loadValues[i].last.toStringAsFixed(4) : loadValues[i].last.toString();
+            _drawValue(
+                text: lastValueLabel,
+                offset: Offset(
+                    point.dx - calcTextSize(lastValueLabel, TextStyle(
+                        fontSize: valuesFontSize,
+                        fontFamily: 'Gost',
+                        fontStyle: FontStyle.italic,
+                    )).width - 5,
+                    window.height * 0.9
+                ),
+            );
+
+            lengthCum += beamWidth;
+        }
+
+        _drawBeamSeparator(lengthCum: lengthCum);
     }
 
     @override

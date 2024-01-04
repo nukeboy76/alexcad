@@ -217,6 +217,7 @@ class AppWidgetState extends State<AppWidget> {
                                 editor.selectedElements,
                                 width: inspectorWidth,
                                 height: height - fileOperationsBarHeight,
+                                visible: !showCalcOverlay,
                                 update: () {
                                     setState(() {});
                                 },
