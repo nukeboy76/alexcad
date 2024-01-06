@@ -29,31 +29,36 @@ class Painter {
         required Color bgColor,
         required Color textColor,
         required Offset textOffset,
+        Color outlineColor = Colors.white,
         double outlineSize = 1.5,
         bool outline = false,
         bool centerAlignX = false,
         bool centerAlignY = false,
+        String? fontFamily,
+        FontStyle? fontStyle,
     }) {
         final textStyle = TextStyle(
             color: textColor,
             fontSize: fontSize,
+            fontFamily: fontFamily,
+            fontStyle: fontStyle,
             background: Paint()..color = bgColor,
             shadows: outline ? [
                 Shadow( // bottomLeft
                     offset: Offset(-outlineSize, -outlineSize),
-                    color: Colors.white
+                    color: outlineColor,
                 ),
                 Shadow( // bottomRight
                     offset: Offset(outlineSize, -outlineSize),
-                    color: Colors.white
+                    color: outlineColor,
                 ),
                 Shadow( // topRight
                     offset: Offset(outlineSize, outlineSize),
-                    color: Colors.white
+                    color: outlineColor,
                 ),
                 Shadow( // topLeft
                     offset: Offset(-outlineSize, outlineSize),
-                    color: Colors.white
+                    color: outlineColor,
                 ),
             ] : null,
         );
@@ -116,7 +121,19 @@ class Painter {
         window.canvas.drawRect(rect, paint);
     }
 
+    void drawRectWithPaint(Window window, Rect rect, Paint p) {
+        window.canvas.drawRect(rect, p);
+    }
+
+    void drawRectStroke(Window window, Rect rect) {
+        window.canvas.drawRect(rect, paintStroke);
+    }
+
     void drawCircle(Window window, Offset c, double r) {
         window.canvas.drawCircle(c, r, paint);
+    }
+
+    void drawCircleStroke(Window window, Offset c, double r) {
+        window.canvas.drawCircle(c, r, paintStroke);
     }
 }

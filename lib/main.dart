@@ -24,12 +24,12 @@ void main() async{
     //await windowManager.ensureInitialized();
     //WindowManager.instance.setMinimumSize(const Size(600, 400));
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.leanBack);
-    runApp(const MyApp());
+    runApp(const App());
 }
 
 
-class MyApp extends StatelessWidget {
-    const MyApp({super.key});
+class App extends StatelessWidget {
+    const App({super.key});
 
     @override
     Widget build(BuildContext context) {
@@ -41,36 +41,37 @@ class MyApp extends StatelessWidget {
                 useMaterial3: true,
             ),
             home: new Scaffold(
-                body: const CADEditor(),
+                body: const AppWidget(),
             ),
         );
     }
 }
 
 
-class CADEditor extends StatefulWidget {
-    const CADEditor({super.key});
+class AppWidget extends StatefulWidget {
+    const AppWidget({super.key});
 
     @override
-    State<CADEditor> createState() => CADEditorState();
+    State<AppWidget> createState() => AppWidgetState();
 }
 
 
-class CADEditorState extends State<CADEditor> {
-    CADEditorState() {
+class AppWidgetState extends State<AppWidget> {
+    AppWidgetState() {
         input = Input(barHeight: barHeight + fileOperationsBarHeight);
     }
-
-    Window window = Window();
-
-    Input input = Input();
-    Editor editor = Editor();
-
-    Painter painter = Painter();
 
     static const double inspectorWidth = 300;
     static const double barHeight = 60;
     static const double fileOperationsBarHeight = 40;
+
+    Window window = Window();
+    Input input = Input();
+    Editor editor = Editor();
+    Painter painter = Painter();
+
+    bool showCalcOverlay = false;
+    static bool isBeamSelectionMode = false;
 
     void init(Canvas canvas, Size size) {
         this.window.init(canvas, size);
@@ -119,7 +120,7 @@ class CADEditorState extends State<CADEditor> {
     void initState() {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.bottom]);
         super.initState();
-    } 
+    }
 
     @override
     Widget build(BuildContext context) {
@@ -147,6 +148,16 @@ class CADEditorState extends State<CADEditor> {
                                         editor,
                                         width: editorWidth,
                                         height: barHeight,
+                                        onChange: (value) {
+                                            setState(() {
+                                                showCalcOverlay = value;
+                                            });
+                                        },
+                                        changeSelectionMode: (value) {
+                                            setState(() {
+                                                isBeamSelectionMode = value;
+                                            });
+                                        }
                                     ),
                                     Stack(
                                         children: [
@@ -162,7 +173,7 @@ class CADEditorState extends State<CADEditor> {
                                                             onPointerUp: _handlePointerUp,
                                                             onPointerDown: _handlePointerDown,
                                                             onPointerMove: _handlePointerMove,
-                                                            onPointerSignal: (pointerSignal) { 
+                                                            onPointerSignal: (pointerSignal) {
                                                                 if(pointerSignal is PointerScrollEvent) {
                                                                     _handlePointerScroll(pointerSignal);
                                                                 }
@@ -172,9 +183,8 @@ class CADEditorState extends State<CADEditor> {
                                                                 height: height,
                                                                 color: Colors.white,
                                                                 child: CustomPaint(
-                                                                    //size: Size.infinite,
-                                                                    painter: CADEditorRenderer(
-                                                                        cad: this
+                                                                    painter: AppWidgetRenderer(
+                                                                        cad: this,
                                                                     ),
                                                                 ),
                                                             ),
@@ -192,6 +202,12 @@ class CADEditorState extends State<CADEditor> {
                                                 editor,
                                                 width: editorWidth,
                                                 height: editorHeight,
+                                                visible: showCalcOverlay,
+                                                close: () {
+                                                    setState(() {
+                                                        showCalcOverlay = false;
+                                                    });
+                                                },
                                             ),
                                         ],
                                     ),
@@ -201,6 +217,10 @@ class CADEditorState extends State<CADEditor> {
                                 editor.selectedElements,
                                 width: inspectorWidth,
                                 height: height - fileOperationsBarHeight,
+                                visible: !showCalcOverlay,
+                                update: () {
+                                    setState(() {});
+                                },
                             ),
                         ],
                     ),
@@ -210,9 +230,10 @@ class CADEditorState extends State<CADEditor> {
     }
 }
 
-class CADEditorRenderer extends CustomPainter {
-    CADEditorState cad;
-    CADEditorRenderer({required this.cad});
+
+class AppWidgetRenderer extends CustomPainter {
+    AppWidgetRenderer({required this.cad});
+    AppWidgetState cad;
 
     @override
     void paint(Canvas canvas, Size size) {
@@ -224,6 +245,7 @@ class CADEditorRenderer extends CustomPainter {
     @override
     bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
+
 
 class FileOperationsBar extends StatefulWidget {
     FileOperationsBar(
@@ -256,8 +278,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
         String nodesToJson = jsonEncode(widget.editor.nodes);
         String beamsToJson = jsonEncode(widget.editor.beams);
 
-        String jsonEditorData = "{\"nodes\":$nodesToJson,\"beams\":$beamsToJson}";
-        return jsonEditorData;
+        return "{\"nodes\":$nodesToJson,\"beams\":$beamsToJson}";
     }
 
     void _jsonToEditor(dynamic json) {
@@ -353,7 +374,25 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                     SizedBox(width: spaceRight),
                     TextButton(
                         style: TextButton.styleFrom(
-                            backgroundColor: pinkColor.lighter(colorScale),
+                            backgroundColor: cianColor.darker(0.3),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(edgeInsets),
+                            textStyle: const TextStyle(fontSize: fontSize),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(roundness),
+                            ),
+                        ),
+                        onPressed: () {
+                            setState(() {
+                                _startNew();
+                            });
+                        },
+                        child: const Text('New'),
+                    ),
+                    SizedBox(width: spaceBetween * 3),
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            backgroundColor: purpleColor.lighter(colorScale),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.all(edgeInsets),
                             textStyle: const TextStyle(fontSize: fontSize),
@@ -407,20 +446,20 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                     SizedBox(width: spaceBetween * 3),
                     TextButton(
                         style: TextButton.styleFrom(
-                            backgroundColor: cianColor.darker(0.3),
+                            backgroundColor: pinkColor.lighter(colorScale),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.all(edgeInsets),
-                            textStyle: const TextStyle(fontSize: fontSize),
+                            textStyle: const TextStyle(fontSize: fontSize * 1.2),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(roundness),
                             ),
                         ),
                         onPressed: () {
                             setState(() {
-                                _startNew();
+                                //_saveFileAs();
                             });
                         },
-                        child: const Text('New'),
+                        child: const Text('?'),
                     ),
                 ],
             ),

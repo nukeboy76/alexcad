@@ -12,9 +12,11 @@ import 'cad_colors.dart';
 import 'cad_icons.dart';
 import 'input.dart';
 import 'inspector.dart';
+import 'main.dart';
 import 'painter.dart';
 import 'types.dart';
 import 'utils/utils.dart';
+import 'utils/colors.dart';
 import 'window.dart';
 
 
@@ -38,6 +40,8 @@ abstract class EditorView {
     final editorElement;
     void render(Window window, Painter painter) {}
     void renderUI(Window window, Painter painter) {}
+    void renderOverlay(Window window, Painter painter) {}
+    void renderOverlayUI(Window window, Painter painter) {}
     bool click(Window window, Offset mouseWorldClick) => true;
     bool boxSelect(BoxSelection selection) => true;
     void refreshCanvasData() {}
@@ -56,7 +60,6 @@ abstract class EditorElement {
 
     bool selected;
 
-    late InspectorView inspectorView;
     late EditorView editorView;
 
     List<Node> getElementNodes() => [];
@@ -72,7 +75,6 @@ class Node implements EditorElement {
     }) {
         this._position = Offset(x, y);
         this.editorView = NodeEditorView(this);
-        this.inspectorView = NodeInspectorView(this);
 
         this.index = _globalIndex;
         _globalIndex++;
@@ -97,9 +99,6 @@ class Node implements EditorElement {
 
     @override
     late EditorView editorView;
-
-    @override
-    late InspectorView inspectorView;
 
     @override
     Offset get center => _position;
@@ -154,7 +153,34 @@ class NodeEditorView implements EditorView {
     @override
     final editorElement;
 
-    void drawForceArrows(Window window, Painter painter) {
+    @override
+    void render(Window window, Painter painter) {}
+
+    @override
+    void renderOverlay(Window window, Painter painter) {
+        if (editorElement.fixator != NodeFixator.disabled) {
+            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.2) : Colors.grey.shade400);
+            painter.drawRect(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(editorElement.center),
+                    radius: fixatorRadius,
+                ),
+            );
+            painter.setPaintStroke(color: Colors.black, width: 2);
+            painter.drawRectStroke(
+                window,
+                Rect.fromCircle(
+                    center: window.worldToScreen(editorElement.center),
+                    radius: fixatorRadius,
+                ),
+            );
+        }
+        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.4) : Colors.grey);
+        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
+    }
+
+    void _drawForceArrows(Window window, Painter painter) {
         if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
             final double arrowWidth = radius / 3;
             final double arrowLength = 40 / window.zoom;
@@ -220,7 +246,7 @@ class NodeEditorView implements EditorView {
             );
             painter.drawText(
                 window: window,
-                text: '${editorElement.force.dx.toStringAsFixed(2)}',
+                text: editorElement.force.dx.toString(),
                 fontSize: forceLabelFontSize,
                 textColor: Colors.black,
                 bgColor: const Color(0x00ffffff),
@@ -233,25 +259,13 @@ class NodeEditorView implements EditorView {
         }
     }
 
-    @override
-    void render(Window window, Painter painter) {
-        if (editorElement.fixator != NodeFixator.disabled) {
-            painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade400);
-            painter.drawRect(
-                window,
-                Rect.fromCircle(
-                    center: window.worldToScreen(editorElement.center),
-                    radius: fixatorRadius,
-                ),
-            );
-        }
-        painter.setPaint(color: editorElement.selected ? cianColor.darker(0.3) : Colors.grey);
-        painter.drawCircle(window, window.worldToScreen(editorElement.center), radius);
-    }
 
     @override
-    void renderUI(Window window, Painter painter) {
-        drawForceArrows(window, painter);
+    void renderUI(Window window, Painter painter) {}
+
+    @override
+    void renderOverlayUI(Window window, Painter painter) {
+        _drawForceArrows(window, painter);
     }
 
     @override
@@ -287,7 +301,6 @@ class Beam implements EditorElement {
         this.section = BeamSection.rect,
         this.selected = false,
     }) : assert(start != end) {
-        this.inspectorView = BeamInspectorView(this);
         this.editorView = BeamEditorView(this);
     }
 
@@ -300,7 +313,6 @@ class Beam implements EditorElement {
     double elasticity;
     double tension;
     BeamSection section;
-
 
     double get rotation { 
         final delta = Offset(end.position.dx - start.position.dx, end.position.dy - start.position.dy);
@@ -315,9 +327,6 @@ class Beam implements EditorElement {
 
     @override
     late EditorView editorView;
-
-    @override
-    late InspectorView inspectorView;
 
     @override
     Offset get center => Offset(start.position.dx + end.position.dx, start.position.dy + end.position.dy) / 2;
@@ -356,10 +365,7 @@ class Beam implements EditorElement {
         );
     }
 
-    Map toJson() {
-        print(start.index);
-        print(end.index);
-    return {
+    Map toJson() => {
         'startI': start.index,
         'endI': end.index,
         'forceX': force.dx,
@@ -367,7 +373,7 @@ class Beam implements EditorElement {
         'sectionArea': sectionArea,
         'elasticity': elasticity,
         'tension': tension,
-    };}
+    };
 }
 
 
@@ -392,29 +398,49 @@ class BeamEditorView implements EditorView {
         painter.drawQuadStroke(window, a, b, c, d);
     }
 
-    void drawForceArrows(Window window, Painter painter) {
-        const double tScale = 0.66;
+    @override
+    void renderOverlay(Window window, Painter painter) {}
 
-        painter.setPaint(color: pinkColor.color);
+    @override
+    void renderOverlayUI(Window window, Painter painter) {
+        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
+            painter.drawText(
+                window: window,
+                text: '[${editorElement.force.dx}; ${editorElement.force.dy}]',
+                fontSize: forceLabelFontSize,
+                textColor: Colors.black,
+                bgColor: const Color(0x00ffffff),
+                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
+                outline: true,
+                outlineSize: 1.25,
+                centerAlignX: true,
+                centerAlignY: true,
+            );
+        }
+    }
+
+    void _drawForceArrows(Window window, Painter painter) {
         if (editorElement.force.dx != 0) {
             final bool xForcePositive = editorElement.force.dx > 0;
 
             Offset beamVec = xForcePositive ? editorElement.end.position - editorElement.start.position :
                                               editorElement.start.position - editorElement.end.position;
 
-            Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
-            Offset gapStep = triangleStep;
+            final double triangleScale = 0.66;
+            final Offset triangleStep = beamVec / window.zoom / editorElement.length * 10;
+            final Offset gapStep = triangleStep;
 
-            Offset aPos = xForcePositive ? c - (c - editorElement.end.position) / tScale :
-                                           a - (a - editorElement.start.position) / tScale;
-            Offset bPos = xForcePositive ? d - (d - editorElement.end.position) / tScale :
-                                           b - (b - editorElement.start.position) / tScale;
+            Offset aPos = xForcePositive ? c - (c - editorElement.end.position) / triangleScale :
+                                           a - (a - editorElement.start.position) / triangleScale;
+            Offset bPos = xForcePositive ? d - (d - editorElement.end.position) / triangleScale :
+                                           b - (b - editorElement.start.position) / triangleScale;
             Offset hPos = xForcePositive ? editorElement.end.position + triangleStep :
                                            editorElement.start.position + triangleStep;
 
             double length = 0;
             double maxLength = editorElement.length - triangleStep.distance;
 
+            painter.setPaint(color: pinkColor.color);
             while (length <= maxLength) {
                 Offset aPosNew = aPos - triangleStep;
                 Offset bPosNew = bPos - triangleStep;
@@ -436,7 +462,7 @@ class BeamEditorView implements EditorView {
         }
     }
 
-    void drawBeamCenter(Window window, Painter painter) {
+    void _drawBeamCenter(Window window, Painter painter) {
         var beamCenterOnScreen = window.worldToScreen(editorElement.center);
         painter.setPaint(color: editorElement.selected ? cianColor.darker(0.5) : Colors.grey.shade900);
         for (final d in directions) {
@@ -446,23 +472,8 @@ class BeamEditorView implements EditorView {
 
     @override
     void renderUI(Window window, Painter painter) {
-        drawForceArrows(window, painter);
-        if (editorElement.force.dx != 0 || editorElement.force.dy != 0) {
-            painter.drawText(
-                window: window,
-                text: '[${editorElement.force.dx.toStringAsFixed(2)}; ${editorElement.force.dy.toStringAsFixed(2)}]',
-                fontSize: forceLabelFontSize,
-                textColor: Colors.black,
-                bgColor: const Color(0x00ffffff),
-                textOffset: window.worldToScreen(editorElement.center) + Offset(0, -forceLabelOffset),
-                outline: true,
-                outlineSize: 1.25,
-                centerAlignX: true,
-                centerAlignY: true,
-            );
-        }
-
-        drawBeamCenter(window, painter);
+        _drawForceArrows(window, painter);
+        _drawBeamCenter(window, painter);
     }
 
     @override
@@ -526,7 +537,7 @@ class EditorInitialSelectionState implements EditorSelectionState {
 
         editor.selectedElements = [];
         final BoxSelection selection = input.boxSelectionWorld;
-        final list = editor.isBeamSelectionMode ? editor.beams : editor.nodes;
+        final list = AppWidgetState.isBeamSelectionMode ? editor.beams : editor.nodes;
 
         if (selection.start != selection.end) {
             for (final c in list) {
@@ -620,28 +631,20 @@ class EditorDragSelectedState implements EditorSelectionState {
 
 
 class Editor {
-    Editor({
-        this.selectedElements = const [],
-        this.dragBoxPosition = Offset.infinite,
-        this.dragBoxRadius = 10,
-        this.elementsUIVisible = true,
-        this.showCalcOverlay = false,
-    }) {
+    Editor() {
         selectionState = EditorInitialSelectionState(this);
     }
 
     List<EditorElement> elements = [];
-    List<EditorElement> selectedElements;
-
-    Offset dragBoxPosition;
-    late double dragBoxRadius;
+    List<EditorElement> selectedElements = [];
 
     Grid grid = Grid();
 
-    bool isBeamSelectionMode = true;
-    bool elementsUIVisible;
-    bool showCalcOverlay;
+    bool elementsUIVisible = true;
     late EditorSelectionState selectionState;
+
+    Offset dragBoxPosition = Offset.infinite;
+    double dragBoxRadius = 10;
 
     FocusNode focus = FocusNode();
 
@@ -662,19 +665,11 @@ class Editor {
     }
 
     List<Node> get nodesReversed {
-        List<Node> list = [];
-        for (final e in elements) {
-            if (e is Node) list.add(e);
-        }
-        return List.from(list.reversed);
+        return List.from(nodes.reversed);
     }
 
     List<Beam> get beamsReversed {
-        List<Beam> list = [];
-        for (final e in elements) {
-            if (e is Beam) list.add(e);
-        }
-        return List.from(list.reversed);;
+        return List.from(beams.reversed);
     }
 
     List<Node> get selectedNodes {
@@ -691,6 +686,21 @@ class Editor {
             if (e is Beam && e.selected) list.add(e);
         }
         return list;
+    }
+
+    void processInput(Window window, Input input) {
+        handleKeyboard(input);
+        selectionState.processInput(this, window, input);
+    }
+
+    void render(Window window, Painter painter, Input input) {
+        grid.render(window, painter);
+        _drawEditorElements(window, painter);
+        if (elementsUIVisible) _drawEditorElementsUI(window, painter);
+        _drawEditorElementsOverlay(window, painter);
+        if (elementsUIVisible) _drawEditorElementsOverlayUI(window, painter);
+        selectionState.drawBoxSelection(window, painter, input);
+        drawDragBox(window, painter, input);
     }
 
     void clearAllElements() {
@@ -768,15 +778,22 @@ class Editor {
         resetSelectionState();
     }
 
-    void processInput(Window window, Input input) {
-        handleKeyboard(input);
-        selectionState.processInput(this, window, input);
-    }
-
-    void drawEditorElements(Window window, Painter painter) {
+    void _drawEditorElements(Window window, Painter painter) {
         for (final e in elements) {
             e.editorView.refreshCanvasData();
             e.editorView.render(window, painter);
+        }
+    }
+
+    void _drawEditorElementsOverlay(Window window, Painter painter) {
+        for (final e in elements) {
+            e.editorView.renderOverlay(window, painter);
+        }
+    }
+
+    void _drawEditorElementsOverlayUI(Window window, Painter painter) {
+        for (final e in elements) {
+            e.editorView.renderOverlayUI(window, painter);
         }
     }
 
@@ -837,18 +854,10 @@ class Editor {
         }
     }
 
-    void drawEditorElementsUI(Window window, Painter painter) {
+    void _drawEditorElementsUI(Window window, Painter painter) {
         for (final e in elements) {
             e.editorView.renderUI(window, painter);
         }
-    }
-
-    void render(Window window, Painter painter, Input input) {
-        grid.render(window, painter);
-        drawEditorElements(window, painter);
-        if (elementsUIVisible) drawEditorElementsUI(window, painter);
-        selectionState.drawBoxSelection(window, painter, input);
-        drawDragBox(window, painter, input);
     }
 }
 
@@ -878,7 +887,7 @@ class Grid {
         final double depth = 1 / depthPower;
         final double step = 32 * depth;
         const double gridSteps = 5;
-        final double drawStopper = max(window.width, window.height);
+        final double drawStopper = max(window.width + 50, window.height + 50);
         final int decimalLevel = (depthPower / 32).clamp(0, 6).toInt();
 
         /// Draw minor gridlines
@@ -927,7 +936,7 @@ class Grid {
             final String textX = coord.dx.toStringAsFixed(decimalLevel);
             final String textY = coord.dy.toStringAsFixed(decimalLevel);
 
-            if (coord.dy.abs() > 1e-9) {
+            if (coord.dy.abs() > 1e-7) {
                 painter.drawText(
                     window: window,
                     text: textY,
@@ -941,7 +950,7 @@ class Grid {
                 );
             }
 
-            if (coord.dx.abs() > 1e-9) {
+            if (coord.dx.abs() > 1e-7) {
                 painter.drawText(
                     window: window,
                     text: textX,
@@ -967,11 +976,15 @@ class EditorBar extends StatefulWidget {
     EditorBar(this.editor, {
         this.width,
         this.height,
+        this.onChange,
+        this.changeSelectionMode,
     });
 
     final Editor editor;
     final double? width;
     final double? height;
+    final onChange;
+    final changeSelectionMode;
 
     @override
     State<EditorBar> createState() => _EditorBarState();
@@ -1001,72 +1014,88 @@ class _EditorBarState extends State<EditorBar> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                    Column(
-                        children: [
-                            ToggleButtons(
-                                onPressed: (int index) {
-                                    setState(() {
-                                        _unselectAllElements();
-                                        for (int i = 0; i < _selectionMode.length; i++) {
-                                            _selectionMode[i] = i == index;
-                                        }
-                                        widget.editor.isBeamSelectionMode = _selectionMode[0];
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: _selectionMode,
-                                children: selectionModeIcons,
-                            ),
-                        ],
-                    ),
-
-                    TextButton(
-                        style: TextButton.styleFrom(
-                            backgroundColor: pinkColor.darker(0.0),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(16.0),
-                            textStyle: const TextStyle(fontSize: 20),
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.loose,
+                        child:
+                        Column(
+                            children: [
+                                ToggleButtons(
+                                    onPressed: (int index) {
+                                        setState(() {
+                                            _unselectAllElements();
+                                            for (int i = 0; i < _selectionMode.length; i++) {
+                                                _selectionMode[i] = i == index;
+                                            }
+                                            widget.changeSelectionMode(_isBeamSelectionMode);
+                                        });
+                                    },
+                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                    selectedBorderColor: cianColor.darker(0.3),
+                                    selectedColor: Colors.white,
+                                    disabledBorderColor: Colors.white,
+                                    disabledColor: Colors.white,
+                                    fillColor: cianColor.darker(0.2),
+                                    color: cianColor.darker(0.2),
+                                    isSelected: _selectionMode,
+                                    children: selectionModeIcons,
+                                ),
+                            ],
                         ),
-                        onPressed: () {
-                            Calculation calc = Calculation();
-                            widget.editor.showCalcOverlay = calc.isElementsValid(widget.editor.beams);
-                        },
-                        child: const Text('Delta'),
                     ),
 
-                    Column(
-                        children: [
-                            ToggleButtons(
-                                onPressed: (int _) {
-                                    setState(() {
-                                        Grid.snap = !Grid.snap;
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: [Grid.snap],
-                                children: [Icon(CadIcons.snapToGrid, size: 32.0)],
+                    Flexible(flex: 4, fit: FlexFit.loose, child: Container()),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.loose,
+                        child: TextButton(
+                            style: TextButton.styleFrom(
+                                backgroundColor: pinkColor.lighter(0.2),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.all(16.0),
+                                textStyle: const TextStyle(fontSize: 20),
                             ),
-                        ],
+                            onPressed: () {
+                                Calculation calc = Calculation();
+                                widget.onChange(calc.isElementsValid(widget.editor.beams));
+                            },
+                            child: const Text('Calc'),
+                        ),
                     ),
 
-                    SizedBox(
-                        height: 60.0,
-                        width: 100,
+                    Flexible(flex: 4, fit: FlexFit.loose, child: Container()),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.tight,
+                        child: Row(
+                            children: [
+                                ToggleButtons(
+                                    onPressed: (int _) {
+                                        setState(() {
+                                            Grid.snap = !Grid.snap;
+                                        });
+                                    },
+                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                    selectedBorderColor: cianColor.darker(0.3),
+                                    selectedColor: Colors.white,
+                                    disabledBorderColor: Colors.white,
+                                    disabledColor: Colors.white,
+                                    fillColor: cianColor.darker(0.2),
+                                    color: cianColor.darker(0.2),
+                                    isSelected: [Grid.snap],
+                                    children: [Icon(CadIcons.snapToGrid, size: 32.0)],
+                                ),
+                            ],
+                        ),
+                    ),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.tight,
                         child: TextField(
-                            controller: TextEditingController(text: Grid.snapLevel.toStringAsFixed(6)),
-                            //decoration: InputDecoration(labelText: "123"),
+                            controller: TextEditingController(text: Grid.snapLevel.toString()),
                             keyboardType: TextInputType.number,
                             inputFormatters: <TextInputFormatter>[
                                 _formatter,
@@ -1075,25 +1104,31 @@ class _EditorBarState extends State<EditorBar> {
                         ),
                     ),
 
-                    Column(
+                    Flexible(flex: 1, fit: FlexFit.tight, child: Container()),
+
+                    Flexible(
+                        flex: 1,
+                        fit: FlexFit.loose,
+                        child: Column(
                         children: [
-                            ToggleButtons(
-                                onPressed: (int _) {
-                                    setState(() {
-                                        widget.editor.elementsUIVisible = !widget.editor.elementsUIVisible;
-                                    });
-                                },
-                                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                selectedBorderColor: cianColor.darker(0.3),
-                                selectedColor: Colors.white,
-                                disabledBorderColor: Colors.white,
-                                disabledColor: Colors.white,
-                                fillColor: cianColor.darker(0.2),
-                                color: cianColor.darker(0.2),
-                                isSelected: [widget.editor.elementsUIVisible],
-                                children:  widget.editor.elementsUIVisible ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
-                            ),
-                        ],
+                                ToggleButtons(
+                                    onPressed: (int _) {
+                                        setState(() {
+                                            widget.editor.elementsUIVisible = !widget.editor.elementsUIVisible;
+                                        });
+                                    },
+                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                    selectedBorderColor: cianColor.darker(0.3),
+                                    selectedColor: Colors.white,
+                                    disabledBorderColor: Colors.white,
+                                    disabledColor: Colors.white,
+                                    fillColor: cianColor.darker(0.2),
+                                    color: cianColor.darker(0.2),
+                                    isSelected: [widget.editor.elementsUIVisible],
+                                    children:  widget.editor.elementsUIVisible ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                                ),
+                            ],
+                        ),
                     ),
                 ],
             ),
@@ -1139,7 +1174,7 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
             return Container();
         }
         _visible = !widget.editor.selectedElements.isEmpty;
-        final isBeamSelectionMode = widget.editor.isBeamSelectionMode;
+        final isBeamSelectionMode = AppWidgetState.isBeamSelectionMode;
         return Container(
             width: widget.width,
             height: widget.height,
@@ -1154,7 +1189,6 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                            SizedBox(width: 47),
                             !isBeamSelectionMode ? MaterialButton(
                                 height: buttonHeight,
                                 minWidth: minWidth,
@@ -1219,23 +1253,31 @@ class _EditorOperationsBarState extends State<EditorOperationsBar> {
     }
 }
 
+
+const double calcPrecision = 0.0025;
+
+
 class CalculationOverlay extends StatefulWidget {
     CalculationOverlay(
         this.editor, {
         this.width,
         this.height,
         this.title = "Calculation results",
-
+        this.visible = false,
+        required this.close,
     });
 
     final Editor editor;
     final String title;
     final double? width;
     final double? height;
+    final bool visible;
+    final close;
 
     @override
     State<CalculationOverlay> createState() => _CalculationOverlayState();
 }
+
 
 class _CalculationOverlayState extends State<CalculationOverlay> {
     static const double buttonHeight = 55;
@@ -1243,61 +1285,293 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
     static const double darkness = 0.2;
     static const double iconSize = 32;
     static const double roundness = 8;
+    static const List<Widget> calcTypeLabels = <Widget>[
+        Text('Nx'),
+        Text('Ux'),
+        Text('σx'),
+    ];
 
     final Calculation calc = Calculation();
 
+    Window constructionWindow = Window();
+    Window movementsWindow = Window();
+    Window longtitudWindow = Window();
+    Window normalTensionsWindow = Window();
+    Painter painter = Painter();
+
+    bool _showHeatMap = true;
+    List<bool> _heatMapType = [true, false, false];
+
+    List<double> _lengths(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].length);
+    List<double> _sectionAreas(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].sectionArea);
+    List<double> _elasticities(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].elasticity);
+    List<double> _beamForces(List<Beam> beams) => List.generate(beams.length, (i) => beams[i].force.dx);
+    List<double> _nodeForces(List<Beam> nodes) => List.generate(nodes.length, (i) => nodes[i].force.dx);
+
+    double _lengthsSum(List<Beam> beams) => _lengths(beams).reduce((a, b) => a + b);
+
+    List<List<double>> _detailedMovements(List<Beam> beams, List<double> deltas) {
+        List<List<double>> movements = [];
+
+        final double step = calcPrecision * _lengthsSum(beams);
+
+        for (int i = 0; i < beams.length; i++) {
+            final double length = beams[i].length;
+            List<double> beamMovements = [];
+
+            for (double j = 0; j < length + 1e-8; j += step) {
+                beamMovements.add(calc.movement(beams[i], deltas[i], deltas[i + 1], j));
+            }
+
+            movements.add(beamMovements);
+        }
+
+        return movements;
+    }
+
+    List<List<double>> _detailedLongitudForces(List<Beam> beams, List<double> deltas) {
+        List<List<double>> longitudForces = [];
+
+        final double step = calcPrecision * _lengthsSum(beams);
+
+        for (int i = 0; i < beams.length; i++) {
+            final double length = beams[i].length;
+            List<double> beamLongitudForces = [];
+
+            for (double j = 0; j < length + 1e-8; j += step) {
+                beamLongitudForces.add(calc.longitudForce(beams[i], deltas[i], deltas[i + 1], j));
+            }
+
+            longitudForces.add(beamLongitudForces);
+        }
+
+        return longitudForces;
+    }
+
+    List<List<double>> _detailedNormalTensions(List<Beam> beams, List<List<double>> longitudForces) {
+        List<List<double>> normalTensions = [];
+
+        for (int i = 0; i < longitudForces.length; i++) {
+            List<double> beamNormalTensions = [];
+
+            for (int j = 0; j < longitudForces[i].length; j++) {
+                beamNormalTensions.add(calc.normalTension(longitudForces[i][j], beams[i].sectionArea));
+            }
+
+            normalTensions.add(beamNormalTensions);
+        }
+
+        return normalTensions;
+    }
+
     @override
     Widget build(BuildContext context) {
-        if (!widget.editor.showCalcOverlay) return SizedBox.shrink();
+        if (!widget.visible) return SizedBox.shrink();
 
         final List<Beam> beams = widget.editor.beamsReversed;
-        calc.isElementsValid(beams);
+        if (!calc.isElementsValid(beams)) return Spacer();
+
+        final List<Node> nodes = widget.editor.nodes;
 
         final List<double> deltas = calc.getDeltas(beams);
         final List<double> longitudForces = calc.getLongitudForces(beams, deltas);
-        final List<double> normalTensions = calc.getNormalTensions(beams, longitudForces);
         final List<double> movements = calc.getMovements(beams, deltas);
+        final List<double> normalTensions = calc.getNormalTensions(beams, longitudForces);
 
         final String deltasStr = deltas != null ? deltas.toString() : "";
-        final String longitudForcesStr = longitudForces != null ? longitudForces.toString() : "";
-        final String normalTensionsStr = normalTensions != null ? normalTensions.toString() : "";
-        final String movementsStr = movements != null ? movements.toString() : "";
+
+        final detailedMovements = _detailedMovements(beams, deltas);
+        final detailedLongitudForces = _detailedLongitudForces(beams, deltas);
+        final detailedNormalTensions = _detailedNormalTensions(beams, detailedLongitudForces);
+
+        List<List<double>>? values = [];
+        if (_showHeatMap) {
+            if (_heatMapType[0]) values = detailedLongitudForces;
+            else if (_heatMapType[1]) values = detailedMovements;
+            else if (_heatMapType[2]) values = detailedNormalTensions;
+        }
+
+        final lengths = _lengths(beams);
 
         return Container(
             width: widget.width,
             height: widget.height,
             alignment: Alignment.center,
             color: Colors.white,
-            child: Column(
-                //mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: ListView(
                 children: [
-                    Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.all(5.0),
-                        child: MaterialButton(
-                            height: buttonHeight,
-                            minWidth: minWidth,
-                            onPressed: () {
-                                setState(() {
-                                    widget.editor.showCalcOverlay = false;
-                                });
-                            },
-                            color: pinkColor.darker(darkness),
-                            textColor: Colors.white,
-                            child: const Icon(
-                               CadIcons.cheese,
-                               size: iconSize,
+                    Column(
+                        children: [
+                            Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.all(5.0),
+                                child: MaterialButton(
+                                    height: buttonHeight,
+                                    minWidth: minWidth,
+                                    onPressed: () {
+                                        setState(() {
+                                            widget.close();
+                                        });
+                                    },
+                                    color: pinkColor.darker(darkness),
+                                    textColor: Colors.white,
+                                    child: const Icon(
+                                       CadIcons.cheese,
+                                       size: iconSize,
+                                    ),
+                                    shape: const RoundedRectangleBorder(
+                                        borderRadius: const BorderRadius.all(const Radius.circular(roundness)),
+                                    ),
+                                ),
                             ),
-                            shape: const RoundedRectangleBorder(
-                                borderRadius: const BorderRadius.all(const Radius.circular(roundness)),
+                            Text(
+                                widget.title,
+                                style: TextStyle(
+                                    fontSize: 25,
+                                    fontFamily: 'Gost',
+                                    fontWeight: FontWeight.bold,
+                                ),
                             ),
-                        ),
+                            SizedBox(height: 12),
+                            Text(
+                                "Δ = $deltasStr",
+                                style: TextStyle(
+                                    fontSize: 25,
+                                    fontFamily: 'Gost',
+                                ),
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Flexible(flex: 1, child: Container()),
+                                    Flexible(
+                                        flex: 4,
+                                        fit: FlexFit.tight,
+                                        child: Container(
+                                            width: widget.width!,
+                                            height: widget.height! / 1.5,
+                                            child: CustomPaint(
+                                                painter: ConstructionRenderer(
+                                                    constructionWindow,
+                                                    beams: beams,
+                                                    nodes: nodes,
+                                                    loadValues: values,
+                                                    showHeatMap: _showHeatMap,
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                    Flexible(
+                                        flex: 1,
+                                        fit: FlexFit.tight,
+                                        child: Column (
+                                            children: [
+                                                ToggleButtons(
+                                                    direction: Axis.vertical,
+                                                    onPressed: (int index) {
+                                                        setState(() {
+                                                            _showHeatMap = !_showHeatMap;
+                                                        });
+                                                    },
+                                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                                    selectedBorderColor: pinkColor.withBrightness(0.2),
+                                                    selectedColor: Colors.white,
+                                                    fillColor: pinkColor.withBrightness(0),
+                                                    color: pinkColor.withBrightness(-0.2),
+                                                    constraints: const BoxConstraints(
+                                                        minHeight: 40.0,
+                                                        minWidth: 80.0,
+                                                    ),
+                                                    isSelected: [_showHeatMap],
+                                                    children:  _showHeatMap ? [Icon(CadIcons.eye)] : [Icon(CadIcons.eyeOff)],
+                                                ),
+                                                SizedBox(height: 40, width: 80),
+                                                ToggleButtons(
+                                                    direction: Axis.vertical,
+                                                    onPressed: (int index) {
+                                                        setState(() {
+                                                            for (int i = 0; i < _heatMapType.length; i++) {
+                                                                _heatMapType[i] = i == index;
+                                                            }
+                                                        });
+                                                    },
+                                                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                                                    selectedBorderColor: pinkColor.withBrightness(0.2),
+                                                    selectedColor: Colors.white,
+                                                    fillColor: pinkColor.withBrightness(0),
+                                                    color: pinkColor.withBrightness(-0.2),
+                                                    constraints: const BoxConstraints(
+                                                        minHeight: 40.0,
+                                                        minWidth: 80.0,
+                                                    ),
+                                                    isSelected: _heatMapType,
+                                                    children: calcTypeLabels,
+                                                ),
+                                            ],
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Container(
+                                        width: widget.width! / 1.5,
+                                        height: widget.height! / 3,
+                                        child: CustomPaint(
+                                            painter: CalculationDiagramRenderer(
+                                                constructionWindow,
+                                                lengths: lengths,
+                                                loadValues: detailedLongitudForces,
+                                                legendLabel: "Nx",
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Container(
+                                        width: widget.width! / 1.5,
+                                        height: widget.height! / 3,
+                                        child: CustomPaint(
+                                            painter: CalculationDiagramRenderer(
+                                                constructionWindow,
+                                                lengths: lengths,
+                                                loadValues: detailedMovements,
+                                                legendLabel: "Ux",
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Container(
+                                        width: widget.width! / 1.5,
+                                        height: widget.height! / 3,
+                                        child: CustomPaint(
+                                            painter: CalculationDiagramRenderer(
+                                                constructionWindow,
+                                                lengths: lengths,
+                                                loadValues: detailedNormalTensions,
+                                                legendLabel: "σx",
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Row(
+                                children: [
+                                    Container(
+                                        height: widget.height! / 6,
+                                    ),
+                                ],
+                            ),
+                        ],
                     ),
-                    Text(widget.title),
-                    Text("Delta: $deltasStr"),
-                    Text("Longtitudinal forces: $longitudForcesStr"),
-                    Text("Movements: $movementsStr"),
-                    Text("Normal tensions: $normalTensionsStr"),
                 ],
             ),
         );
@@ -1305,15 +1579,631 @@ class _CalculationOverlayState extends State<CalculationOverlay> {
 }
 
 
+class ConstructionRenderer extends CustomPainter {
+    ConstructionRenderer(
+        this.window, {
+        required this.beams,
+        required this.nodes,
+        required this.loadValues,
+        required this.showHeatMap,
+    });
+
+    Window window;
+    List<Beam> beams;
+    List<Node> nodes;
+    List<List<double>> loadValues;
+    bool showHeatMap;
+
+    Painter painter = Painter();
+
+    static const double nodeForceArrowLength = 100;
+    static const double circleRadius = 18;
+    static const double labelsFontSize = 24;
+
+    double get _minLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(min)
+    ).reduce(min);
+
+    double get _maxLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(max)
+    ).reduce(max);
+
+    double _lengthsSum(List<Beam> beams) {
+        double total = 0;
+        for (final b in beams) {
+            total += b.length;
+        }
+        return total;
+    }
+
+    void _drawLegend() {
+        if (!showHeatMap) return;
+        final double maxLoad = _maxLoad;
+        final double minLoad = _minLoad;
+
+        const double opacity = 0.55;
+
+        final String textMin = "min = ${minLoad.toString().length <= 8 ? minLoad.toString() : minLoad.toStringAsFixed(6)}";
+        final String textMax = "max = ${maxLoad.toString().length <= 8 ? maxLoad.toString() : maxLoad.toStringAsFixed(6)}";
+        final Color minColor = withBrightness(Color.fromRGBO(0, 0, 255, 1), opacity);
+        final Color maxColor = withBrightness(Color.fromRGBO(255, 0, 0, 1), opacity);
+
+        const double distanceBetween = 30;
+        const double radius = 20;
+        final double rectX = -0.4 * window.center.dx;
+
+        final double rectMinY = window.center.dy - distanceBetween;
+        final double rectMaxY = window.center.dy + distanceBetween;
+
+        final Rect rectMin = Rect.fromCircle(center: Offset(rectX, rectMinY), radius: radius);
+        final Rect rectMax = Rect.fromCircle(center: Offset(rectX, rectMaxY), radius: radius);
+
+        painter.setPaint(color: minColor, width: 1);
+        painter.drawRect(window, rectMin);
+        painter.setPaint(color: maxColor, width: 1);
+        painter.drawRect(window, rectMax);
+
+        painter.setPaintStroke(color: Colors.black, width: 4);
+        painter.drawRectStroke(window, rectMin);
+        painter.drawRectStroke(window, rectMax);
+
+        painter.drawText(
+            window: window,
+            text: textMin,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(rectX + radius * 2, rectMinY),
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+        painter.drawText(
+            window: window,
+            text: textMax,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(rectX + radius * 2, rectMaxY),
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+        painter.drawText(
+            window: window,
+            text: '(abs)',
+            fontSize: labelsFontSize * 0.85,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(rectX + radius * 2, rectMinY - distanceBetween * 1.25),
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawBeamHeatRect({
+        required Offset beamCenter,
+        required double width,
+        required double height,
+        required List<double> beamLoad,
+    }) {
+        if (!showHeatMap) return;
+
+        final Rect rect = Rect.fromCenter(center: beamCenter, width: width, height: height);
+
+        final double maxLoad = _maxLoad;
+
+        const double opacity = 0.55;
+        final List<Color> normalizedLoadToColors = List.generate(
+            beamLoad.length,
+            (index) {
+                final double colorValue = ((beamLoad[index] / maxLoad).abs()).clamp(0, 1);
+                final int r = (sin(twoPI * colorValue) * 255).toInt();
+                final int b = (cos(twoPI * colorValue) * 255).toInt();
+                return withBrightness(
+                    Color.fromRGBO(r, 0, b, 1),
+                    opacity,
+                );
+            }
+        );
+
+        final Gradient gradient = LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: normalizedLoadToColors,
+            tileMode: TileMode.clamp,
+        );
+
+        final Paint paint = Paint()..shader = gradient.createShader(rect);
+
+        painter.drawRectWithPaint(window, rect, paint);
+    }
+
+    void _drawBeamRect({
+        required Offset beamCenter,
+        required double width,
+        required double height,
+    }) {
+        painter.setPaintStroke(color: Colors.black, width: 4);
+        painter.drawRectStroke(window, Rect.fromCenter(center: beamCenter, width: width, height: height));
+    }
+
+    void _drawLength({
+        required double beamLength,
+        required double lengthCum,
+        required double width,
+    }) {
+        painter.setPaint(color: Colors.black, width: 1.5);
+        painter.drawLine(window, Offset(lengthCum, window.height), Offset(lengthCum + width, window.height));
+
+        painter.drawText(
+            window: window,
+            text: 'L=${beamLength.toString().length >= 5 ? beamLength.toStringAsFixed(5) : beamLength.toString()}',
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(lengthCum + width / 2, window.height - labelsFontSize + 3),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+
+        const double triangleStep = 20;
+        const double triangleHeight = 5;
+
+        painter.drawTriangle(
+            window,
+            Offset(lengthCum, window.height),
+            Offset(lengthCum + triangleStep, window.height + triangleHeight),
+            Offset(lengthCum + triangleStep, window.height - triangleHeight),
+        );
+        painter.drawTriangle(
+            window,
+            Offset(lengthCum + width, window.height),
+            Offset(lengthCum + width - triangleStep, window.height + triangleHeight),
+            Offset(lengthCum + width - triangleStep, window.height - triangleHeight),
+        );
+    }
+
+    void _drawBeamSeparator({
+        required double lengthCum,
+    }) {
+        final nodeSquareTop = Offset(lengthCum, 0.875 * window.height - circleRadius);
+        painter.setPaint(color: Colors.black, width: 1.5);
+        painter.drawLine(window, Offset(lengthCum, window.center.dy), nodeSquareTop);
+
+        final nodeSquareBottom = Offset(lengthCum, 0.875 * window.height + circleRadius);
+        painter.setPaint(color: Colors.black, width: 1.5);
+        painter.drawLine(window, nodeSquareBottom, Offset(lengthCum, window.height));
+    }
+
+    void _drawBeamNumber({
+        required String text,
+        required Offset circlePos,
+    }) {
+        painter.setPaintStroke(color: Colors.black, width: 1.5);
+        painter.drawCircleStroke(window, circlePos, circleRadius);
+
+        painter.drawText(
+            window: window,
+            text: text,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: circlePos + Offset(0, 3),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+        );
+    }
+
+    void _drawElasticityAndAreaFootnote({
+        required int i,
+        required double lengthCum,
+        required double width,
+        required double height,
+    }) {
+        final String textEA = 'A=${beams[i].sectionArea}, E=${beams[i].elasticity}';
+        final double textEALength = calcTextSize(textEA, TextStyle(fontSize: labelsFontSize)).width - 5;
+        final double pointerPosX = i != beams.length - 1 ? lengthCum + 30 : lengthCum + width - 30;
+        final double pointerPosY = window.center.dy - height / 4;
+        final double footnoteStartX = i != beams.length - 1 ? lengthCum + 60 : lengthCum + width - 60;
+        final double footnoteEndX = i != beams.length - 1 ? lengthCum + 60 + textEALength : lengthCum + width - 60 - textEALength;
+        final double footnoteY = window.height / 3.5 - 7;
+
+        final Offset pointer = Offset(pointerPosX, pointerPosY);
+        final Offset footnoteStart = Offset(footnoteStartX, footnoteY);
+        final Offset footnoteEnd = Offset(footnoteEndX, footnoteY);
+
+        painter.setPaint(color: Colors.black);
+        painter.drawCircle(window, pointer, 5);
+        painter.drawLine(window, pointer, footnoteStart);
+        painter.drawLine(window, footnoteStart, footnoteEnd);
+        painter.drawText(
+            window: window,
+            text: textEA,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(i != beams.length - 1 ? footnoteStartX : footnoteEndX, footnoteY - 22),
+            outlineColor: Colors.black,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawBeamForce({
+        required String text,
+        required double beamCenterX,
+        required double height,
+    }) {
+        painter.drawText(
+            window: window,
+            text: 'q=$text',
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(beamCenterX, window.center.dy - height / 4),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawBeamForceArrows({ 
+        required double lengthCum,
+        required double width,
+        required bool leftForce,
+        required bool rightForce,
+        required bool isPositive,
+    }) {
+        painter.setPaint(color: Colors.black, width: 1);
+        painter.drawLine(window, Offset(lengthCum, window.center.dy), Offset(lengthCum + width, window.center.dy));
+
+        const double step = 16;
+        const double triangleHeight = 8;
+        final double flip = isPositive ? 1 : -1;
+
+        for (
+            double i = lengthCum + (isPositive ? step : 2 * step) + (leftForce ? nodeForceArrowLength + step : 0);
+            i < lengthCum + width - (isPositive ? step : 0.33 * step) - (rightForce ? nodeForceArrowLength + step: 0);
+            i += step * 2
+        ) {
+            painter.drawTriangle(
+                window,
+                Offset(i, window.center.dy + triangleHeight),
+                Offset(i + step * flip, window.center.dy),
+                Offset(i + 0.3 * step * flip, window.center.dy),
+            );
+            painter.drawTriangle(
+                window,
+                Offset(i, window.center.dy - triangleHeight),
+                Offset(i + step * flip, window.center.dy),
+                Offset(i + 0.3 * step * flip, window.center.dy),
+            );
+        }
+    }
+
+    void _drawNodeSquare({
+        required String text,
+        required double lengthCum,
+    }) {
+        final nodeSquaresPos = Offset(lengthCum, 0.875 * window.height);
+        painter.setPaintStroke(color: Colors.black, width: 1.5);
+        painter.drawRectStroke(window, Rect.fromCircle(center: nodeSquaresPos, radius: circleRadius));
+        painter.drawText(
+            window: window,
+            text: text,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: nodeSquaresPos + Offset(0, 3),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+        );
+    }
+
+    void _drawNodeFixators() {
+        const double fixatorOffset = 12.5;
+        final double fixatorHeightStart = 0.2 * window.height;
+        final double fixatorHeightEnd = 0.8 * window.height;
+
+        painter.setPaint(color: Colors.black, width: 3);
+        if (nodes.first.fixator != NodeFixator.disabled) {
+            painter.drawLine(window, Offset(0, fixatorHeightStart), Offset(0, fixatorHeightEnd));
+            for (double i = fixatorHeightStart; i < fixatorHeightEnd; i += fixatorOffset) {
+                painter.drawLine(window, Offset(-fixatorOffset * 1.5, i + fixatorOffset), Offset(0, i));
+            }
+        }
+        if (nodes.last.fixator != NodeFixator.disabled) {
+            painter.drawLine(window, Offset(window.width, fixatorHeightStart), Offset(window.width, fixatorHeightEnd));
+            for (double i = fixatorHeightEnd; i > fixatorHeightStart; i -= fixatorOffset) {
+                painter.drawLine(window, Offset(fixatorOffset * 1.5 + window.width, i - fixatorOffset), Offset(window.width, i));
+            }
+        }
+    }
+
+    void _drawNodeForceWithArrow({
+        required String text,
+        required double lengthCum,
+        required bool isPositive,
+    }) {
+
+        final double flip = isPositive ? 1 : -1;
+        final double arrowLength = nodeForceArrowLength * flip;
+
+        painter.setPaint(color: Colors.black, width: 8);
+        painter.drawLine(window, Offset(lengthCum, window.center.dy), Offset(lengthCum + arrowLength, window.center.dy));
+
+        final double triangleStep = 20 * flip;
+        final double triangleHeight = 10;
+
+        painter.drawTriangle(
+            window,
+            Offset(lengthCum + arrowLength, window.center.dy),
+            Offset(lengthCum + arrowLength + triangleStep, window.center.dy),
+            Offset(lengthCum + arrowLength - 0.3 * triangleStep, window.center.dy + triangleHeight * flip),
+        );
+        painter.drawTriangle(
+            window,
+            Offset(lengthCum + arrowLength, window.center.dy),
+            Offset(lengthCum + arrowLength + triangleStep, window.center.dy),
+            Offset(lengthCum + arrowLength - 0.3 * triangleStep, window.center.dy - triangleHeight * flip),
+        );
+
+        painter.drawText(
+            window: window,
+            text: text,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(lengthCum + arrowLength / 2 - 2 * flip, window.center.dy - triangleHeight - 6),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    @override
+    void paint(Canvas canvas, Size size) {
+        window.init(canvas, size);
+
+        final double lengthsSum = _lengthsSum(beams);
+        final double maxBeamRectWidth = window.width / lengthsSum;
+
+        final double maxSectionArea = List.generate(beams.length, (index) => beams[index].sectionArea).reduce(max);
+        final double maxBeamRectHeight = window.center.dy / maxSectionArea;
+
+        double lengthCum = 0;
+        for (int i = 0; i < beams.length; i++) {
+            final double beamWidth = beams[i].length * maxBeamRectWidth;
+            final double beamHeight = beams[i].sectionArea * maxBeamRectHeight * 0.8;
+            final double beamCenterX = lengthCum + beamWidth / 2;
+            final Offset beamCenter = Offset(beamCenterX, window.center.dy);
+
+            if (showHeatMap) _drawBeamHeatRect(beamCenter: beamCenter, width: beamWidth, height: beamHeight, beamLoad: loadValues![i]);
+            _drawBeamRect(beamCenter: beamCenter, width: beamWidth, height: beamHeight);
+            _drawLength(beamLength: beams[i].length, lengthCum: lengthCum, width: beamWidth);
+            _drawBeamSeparator(lengthCum: lengthCum);
+            _drawBeamNumber(text: '${i+1}', circlePos: Offset(beamCenterX, 0.125 * window.height));
+            _drawElasticityAndAreaFootnote(i: i, lengthCum: lengthCum, width: beamWidth, height: beamHeight);
+
+            if (beams[i].force.dx != 0) {
+                final bool leftForce = nodes[i].force.dx > 0;
+                final bool rightForce = nodes[i + 1].force.dx < 0;
+
+                _drawBeamForce(text: beams[i].force.dx.toString(), beamCenterX: beamCenterX, height: beamHeight);
+                _drawBeamForceArrows(lengthCum: lengthCum, width: beamWidth, leftForce: leftForce, rightForce: rightForce, isPositive: beams[i].force.dx >= 0);
+            }
+
+            if (nodes[i].force.dx != 0) _drawNodeForceWithArrow(text: 'F=${nodes[i].force.dx}', lengthCum: lengthCum, isPositive: nodes[i].force.dx >= 0);
+
+            _drawNodeSquare(text: '${i+1}', lengthCum: lengthCum);
+
+            lengthCum += beamWidth;
+        }
+
+        _drawBeamSeparator(lengthCum: lengthCum);
+        _drawNodeSquare(text: '${beams.length + 1}', lengthCum: lengthCum);
+        _drawNodeFixators();
+
+        _drawLegend();
+    }
+
+    @override
+    bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
+
+class CalculationDiagramRenderer extends CustomPainter {
+    CalculationDiagramRenderer(
+        this.window, {
+        required this.lengths,
+        required this.loadValues,
+        required this.legendLabel,
+    });
+
+    final Window window;
+    final List<double> lengths;
+    final List<List<double>> loadValues;
+    final String legendLabel;
+
+    final Painter painter = Painter();
+
+    static const double yScale = 1.5;
+    static const double labelsFontSize = 32;
+    static const double valuesFontSize = 24;
+
+    double get _minLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(min)
+    ).reduce(min);
+
+    double get _maxLoad => List.generate(loadValues.length, (i) => 
+        List.generate(loadValues[i].length, (j) => loadValues[i][j].abs()).reduce(max)
+    ).reduce(max);
+
+    double get _lengthsSum => lengths.reduce((a, b) => a + b);
+
+    void _drawLegend({required String label}) {
+        painter.drawText(
+            window: window,
+            text: label,
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(-66, window.center.dy),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+
+        painter.drawText(
+            window: window,
+            text: "+",
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(-15, window.center.dy - 20),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+
+        painter.drawText(
+            window: window,
+            text: "-",
+            fontSize: labelsFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: Offset(-15, window.center.dy + 20),
+            outlineColor: Colors.black,
+            centerAlignX: true,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawValue({required String text, required Offset offset}) {
+        painter.drawText(
+            window: window,
+            text: text,
+            fontSize: valuesFontSize,
+            textColor: Colors.black,
+            bgColor: Color(0x00ffffff),
+            textOffset: offset,
+            outlineColor: Colors.black,
+            centerAlignY: true,
+            fontFamily: 'Gost',
+            fontStyle: FontStyle.italic,
+        );
+    }
+
+    void _drawCenterAxisX() {
+        painter.setPaint(color: Colors.black, width: 2);
+        painter.drawLine(window, Offset(0, window.center.dy), Offset(window.width, window.center.dy));
+    }
+
+    void _drawBeamSeparator({
+        required double lengthCum,
+    }) {
+        painter.setPaint(color: Colors.black, width: 1.5);
+        painter.drawLine(window, Offset(lengthCum, 0), Offset(lengthCum, window.height));
+    }
+
+    double _loadY(double maxY, double maxLoad, double load) => -load * maxY / maxLoad + maxY * yScale;
+
+    @override
+    void paint(Canvas canvas, Size size) {
+        window.init(canvas, size);
+        _drawLegend(label: legendLabel);
+        _drawCenterAxisX();
+
+        final double lengthsSum = _lengthsSum;
+        final double maxY = window.center.dy / yScale;
+        final double maxBeamWidth = window.width / lengthsSum;
+        final double minLoad = _minLoad;
+        final double maxLoad = _maxLoad;
+
+        double lengthCum = 0;
+
+        Offset point = Offset(0, _loadY(maxY, maxLoad, loadValues[0][0]));
+        for (int i = 0; i < loadValues.length; i++) {
+            print(loadValues[i].length);
+
+            _drawValue(
+                text: loadValues[i][0].toString().length > 4 ? loadValues[i][0].toStringAsFixed(4) : loadValues[i][0].toString(),
+                offset: Offset(point.dx + 3.5, window.height * 0.9),
+            );
+
+            final double beamWidth = lengths[i] * maxBeamWidth;
+            final double beamCenterX = lengthCum + beamWidth / 2;
+            final Offset beamCenter = Offset(beamCenterX, window.center.dy);
+
+            _drawBeamSeparator(lengthCum: lengthCum);
+
+            final double step = calcPrecision * maxBeamWidth * _lengthsSum;
+
+            double loadX = 0;
+
+            painter.setPaint(color: Colors.black, width: 2);
+            for (int j = 0; j < loadValues[i].length; j++) {
+                final Offset pointNew = Offset(lengthCum + loadX, _loadY(maxY, maxLoad, loadValues[i][j]));
+                painter.drawLine(window, point, pointNew);
+
+                if (j % (4) == 0) painter.drawLine(window, pointNew, Offset(pointNew.dx, window.center.dy));
+
+                point = pointNew;
+                loadX += step;
+            }
+
+            final String lastValueLabel = loadValues[i].last.toString().length > 4 ? loadValues[i].last.toStringAsFixed(4) : loadValues[i].last.toString();
+            _drawValue(
+                text: lastValueLabel,
+                offset: Offset(
+                    point.dx - calcTextSize(lastValueLabel, TextStyle(
+                        fontSize: valuesFontSize,
+                        fontFamily: 'Gost',
+                        fontStyle: FontStyle.italic,
+                    )).width - 5,
+                    window.height * 0.9
+                ),
+            );
+
+            lengthCum += beamWidth;
+        }
+
+        _drawBeamSeparator(lengthCum: lengthCum);
+    }
+
+    @override
+    bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
+
 class Calculation {
     double k(Beam beam) => beam.elasticity * beam.sectionArea / beam.length;
 
     bool isElementsValid(List<Beam> beams) {
-        return true;
-
-        // TODO: fix bug: always return false (skip for loop)
-        /*
         if (beams.isNotEmpty) { return true; }
+        return false;
+        /*
         for (final b in beams) {
             if (b.start.fixator != NodeFixator.disabled || b.end.fixator != NodeFixator.disabled) { return true; }
         }
@@ -1351,9 +2241,6 @@ class Calculation {
             matrix[beamsLength][beamsLength - 1] = 0;
         }
 
-        print("A: ");
-        print(matrix);
-
         return matrix;
     }
 
@@ -1365,22 +2252,15 @@ class Calculation {
         matrix.add(beams.first.start.fixator == NodeFixator.disabled ?
             Array([-q(beams.first.force.dx, beams.first.length) + beams.first.start.force.dx])
             : Array([0]));
-        print(matrix);
 
         for (int i = 1; i < beamsLength; i++) {
             matrix.add(Array([-q(beams[i - 1].force.dx, beams[i - 1].length) - q(beams[i].force.dx, beams[i].length) + beams[i].start.force.dx]));
         }
 
-        print(matrix);
-
         matrix.add(beams.last.end.fixator == NodeFixator.disabled ?
             Array([-q(beams.last.force.dx, beams.last.length) + beams.last.end.force.dx])
             : Array([0]));
 
-        print(matrix);
-
-        print("B matrix:");
-        print(matrix);
         return matrix;
     }
 
@@ -1389,13 +2269,11 @@ class Calculation {
             final a = _getMatrixA(beams);
             final b = _getMatrixB(beams);
             final deltas = matrixSolve(a, b).getColumn(0);
-            print("Deltas:");
-            print(deltas);
             return deltas != null ? deltas.toList() : [];
         } catch (e) {
             print(e);
-            return [];
         }
+        return [];
     }
 
     double longitudForce(
@@ -1416,12 +2294,15 @@ class Calculation {
                 longitudForces.add(longitudForce(beams[i], deltas[i], deltas[i + 1], beams[i].length));
             }
 
-            print(longitudForces);
             return longitudForces;
         } catch (e) {
             print(e);
-            return [];
         }
+        return [];
+    }
+
+    double normalTension(double longitudForce, double sectionArea) {
+        return longitudForce / sectionArea;
     }
 
     List<double> getNormalTensions(List<Beam> beams, List<double> longitudForces) {
@@ -1431,15 +2312,15 @@ class Calculation {
             const c = 2;
             for (int i = 0; i < beams.length; i++) {
                 for (int j = 0; j < c; j++) {
-                    normalTensions.add(longitudForces[i * c + j] / beams[i].sectionArea);
+                    normalTensions.add(normalTension(longitudForces[i * c + j], beams[i].sectionArea));
                 }
             }
 
             return normalTensions;
         } catch(e) {
             print(e);
-            return [];
         }
+        return [];
     }
 
     double movement(
@@ -1463,11 +2344,10 @@ class Calculation {
                 movements.add(movement(beams[i], deltas[i], deltas[i + 1], beams[i].length));
             }
 
-            print(movements);
             return movements;
         } catch (e) {
             print(e);
-            return [];
         }
+        return [];
     }
 }

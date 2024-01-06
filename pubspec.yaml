@@ -65,9 +65,16 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   fonts:
-   - family:  CadIcons
-     fonts:
-      - asset: assets/fonts/CadIcons.ttf
+    - family:  CadIcons
+      fonts:
+        - asset: assets/fonts/CadIcons.ttf
+    - family: Gost
+      fonts:
+        - asset: assets/fonts/fonts-GOST/gost1.ttf
+        - asset: assets/fonts/fonts-GOST/gost2.ttf
+        - asset: assets/fonts/fonts-GOST/gost3.ttf
+        - asset: assets/fonts/fonts-GOST/gost4.ttf
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
