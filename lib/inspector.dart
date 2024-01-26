@@ -580,7 +580,7 @@ class _SingleValueWidgetState extends State<SingleValueWidget> {
                             ],
                             onChanged: (value) {
                                 setState(() {
-                                    print(double.parse(value));
+                                    //print(double.parse(value));
                                     widget.onChange(double.parse(value));
                                 });
                             },

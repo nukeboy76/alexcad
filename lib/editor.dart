@@ -992,7 +992,7 @@ class EditorBar extends StatefulWidget {
 
 
 class _EditorBarState extends State<EditorBar> {
-    List<bool> _selectionMode = [true, false];
+    List<bool> _selectionMode = [false, true];
 
     TextInputFormatter _formatter = FilteringTextInputFormatter.allow(RegExp(defaultTextInputRegExpTemplate));
 
@@ -2145,7 +2145,7 @@ class CalculationDiagramRenderer extends CustomPainter {
 
         Offset point = Offset(0, _loadY(maxY, maxLoad, loadValues[0][0]));
         for (int i = 0; i < loadValues.length; i++) {
-            print(loadValues[i].length);
+            //print(loadValues[i].length);
 
             _drawValue(
                 text: loadValues[i][0].toString().length > 4 ? loadValues[i][0].toStringAsFixed(4) : loadValues[i][0].toString(),
@@ -2271,7 +2271,7 @@ class Calculation {
             final deltas = matrixSolve(a, b).getColumn(0);
             return deltas != null ? deltas.toList() : [];
         } catch (e) {
-            print(e);
+            //print(e);
         }
         return [];
     }
@@ -2296,7 +2296,7 @@ class Calculation {
 
             return longitudForces;
         } catch (e) {
-            print(e);
+            //print(e);
         }
         return [];
     }
@@ -2318,7 +2318,7 @@ class Calculation {
 
             return normalTensions;
         } catch(e) {
-            print(e);
+            //print(e);
         }
         return [];
     }
@@ -2346,7 +2346,7 @@ class Calculation {
 
             return movements;
         } catch (e) {
-            print(e);
+            //print(e);
         }
         return [];
     }

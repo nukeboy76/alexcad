@@ -300,7 +300,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
 
             if (result != null) {
                 openFilePath = result.files.single.path;
-                print(openFilePath);
+                //print(openFilePath);
                 File file = File(openFilePath!);
                 final content = await file.readAsString();
 
@@ -309,7 +309,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                 // User canceled the picker
             }
         } catch (e) {
-            print(e);
+            //print(e);
         }
     }
 
@@ -317,7 +317,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
         if (openFilePath != null) {
             final file = File(openFilePath!);
             final data = _editorDataToJson();
-            print(data);
+            //print(data);
             file.writeAsString(data);
         } else {
             _writeEditorDataToPath.call();
@@ -342,7 +342,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
               // User canceled the picker
             }
         } catch (e) {
-            print(e);
+            //print(e);
         }
     }
 
@@ -454,11 +454,36 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                                 borderRadius: BorderRadius.circular(roundness),
                             ),
                         ),
-                        onPressed: () {
-                            setState(() {
-                                //_saveFileAs();
-                            });
-                        },
+                        onPressed: ()  => showDialog<String>(
+                            context: context,
+                            builder: (BuildContext context) => AlertDialog(
+                                title: const Text('alexcad :: info'),
+                                content: const Text(
+                                    'Программа для прочностных расчётов стержневых систем, '
+                                    'испытывающих растяжение-сжатие. \n'
+                                    'На данный момент реализованы расчеты для одномерных систем. \n'
+                                    'Редактор — двумерный. \n'
+                                    'Программу разработал студент 3-го курса МГТУ Станкин, Чеченев Александр. \n'
+                                    'Прикладная информатика, 2023-2024.\n\n'
+                                    'Алгоритм действий при работе с программой:\n'
+                                    '   1. Создать 2 или более различных точек на координатной плоскости\n'
+                                    '   2. Выделяя необходимые узлы, создать стержни между ними с помощью 🧀.\n'
+                                    '      (создаст полносвязный граф для всех выделенных узлов)\n'
+                                    '   3. Задать параметры узлов (виджет "Inspector")\n'
+                                    '   4. Переключиться в режим стержней\n'
+                                    '   5. Задать параметры стержней (виджет "Inspector")\n'
+                                    '   6. Нажать кнопку "Calc"\n'
+                                    '   7. ???\n'
+                                    '   8. PROFIT!!'
+                                ),
+                                actions: <Widget>[
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(context, 'Cancel'),
+                                        child: const Text('Cancel'),
+                                    ),
+                                ],
+                            ),
+                        ),
                         child: const Text('?'),
                     ),
                 ],
