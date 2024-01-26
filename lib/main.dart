@@ -296,7 +296,7 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
 
     void _readEditorData() async {
         try {
-            FilePickerResult? result = await FilePicker.platform.pickFiles();
+            FilePickerResult? result = await FilePicker.platform.pickFiles(initialDirectory: "~/alexcad/example_data/");
 
             if (result != null) {
                 openFilePath = result.files.single.path;
@@ -474,7 +474,9 @@ class _FileOperationsBarState extends State<FileOperationsBar> {
                                     '   5. Задать параметры стержней (виджет "Inspector")\n'
                                     '   6. Нажать кнопку "Calc"\n'
                                     '   7. ???\n'
-                                    '   8. PROFIT!!'
+                                    '   8. PROFIT!!\n'
+                                    '\n'
+                                    'P.S. Возможны баги в веб-версии.'
                                 ),
                                 actions: <Widget>[
                                     TextButton(
