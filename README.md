@@ -20,7 +20,7 @@
 
 Watch a short demo on YouTube:
 
-[Watch on YouTube](https://www.youtube.com/watch?v=-bKlsGRozbw)
+[![Watch the demo on YouTube](https://img.youtube.com/vi/-bKlsGRozbw/hqdefault.jpg)](https://www.youtube.com/watch?v=-bKlsGRozbw)
 
 ---
 
@@ -172,11 +172,5 @@ You can open the provided `example_data/*.json` files from the app's File -> Ope
 3. The model will load; use the **Calculate** / overlay or heatmap toggles to compute and visualize results.
 4. Modify node/beam properties in the Inspector and re-run calculations.
 5. Save your model back to disk with **File → Save**.
-
----
-
-<!-- YouTube embed -->
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/-bKlsGRozbw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ---
